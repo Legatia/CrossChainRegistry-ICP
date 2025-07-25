@@ -1,0 +1,27 @@
+{
+  "canisters": {
+    "CrossChainRegistry_backend": {
+      "candid": "src/CrossChainRegistry_backend/CrossChainRegistry_backend.did",
+      "package": "CrossChainRegistry_backend",
+      "type": "rust"
+    },
+    "CrossChainRegistry_frontend": {
+      "dependencies": [
+        "CrossChainRegistry_backend"
+      ],
+      "source": [
+        "src/CrossChainRegistry_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "CrossChainRegistry_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
