@@ -1,3 +1,379 @@
+type CompanyBasicInfo = record {
+    name : text;
+    description : text;
+    website : text;
+    founding_date : text;
+    team_size : nat32;
+    focus_areas : vec text;
+};
+
+type Web3Identity = record {
+    github_org : opt text;
+    twitter_handle : opt text;
+    discord_server : opt text;
+    telegram_channel : opt text;
+    domain_verified : bool;
+    social_verification_status : VerificationStatus;
+};
+
+type CrossChainPresence = record {
+    ethereum_contracts : vec text;
+    bitcoin_addresses : vec text;
+    icp_canisters : vec text;
+    polygon_contracts : vec text;
+    treasury_wallets : vec WalletInfo;
+    token_contracts : vec TokenInfo;
+};
+
+type WalletInfo = record {
+    chain : text;
+    address : text;
+    wallet_type : text;
+    verified : bool;
+};
+
+type TokenInfo = record {
+    chain : text;
+    contract_address : text;
+    symbol : text;
+    name : text;
+    verified : bool;
+};
+
+type TeamMember = record {
+    name : text;
+    role : text;
+    github_profile : opt text;
+    linkedin_profile : opt text;
+    verified : bool;
+};
+
+type CommunityValidation = record {
+    peer_endorsements : vec Endorsement;
+    employee_testimonials : vec Testimonial;
+    community_vouches : vec Vouch;
+    reputation_score : nat32;
+    reputation_staked : nat64;
+};
+
+type Endorsement = record {
+    endorser_company_id : text;
+    message : text;
+    timestamp : nat64;
+    endorser_principal : principal;
+};
+
+type Testimonial = record {
+    author_name : text;
+    role : text;
+    message : text;
+    timestamp : nat64;
+    verified : bool;
+};
+
+type Vouch = record {
+    voucher_principal : principal;
+    message : text;
+    timestamp : nat64;
+    weight : nat32;
+};
+
+type VerificationStatus = variant {
+    Pending;
+    Verified;
+    Failed;
+    Expired;
+};
+
+type CompanyStatus = variant {
+    Pending;
+    Verified;
+    Trusted;
+    Flagged;
+    Suspended;
+};
+
+type Company = record {
+    id : text;
+    basic_info : CompanyBasicInfo;
+    web3_identity : Web3Identity;
+    cross_chain_presence : CrossChainPresence;
+    team_members : vec TeamMember;
+    community_validation : CommunityValidation;
+    status : CompanyStatus;
+    created_at : nat64;
+    updated_at : nat64;
+    created_by : principal;
+    verification_score : nat32;
+};
+
+type CreateCompanyRequest = record {
+    basic_info : CompanyBasicInfo;
+    web3_identity : Web3Identity;
+    cross_chain_presence : CrossChainPresence;
+    team_members : vec TeamMember;
+};
+
+type UpdateCompanyRequest = record {
+    company_id : text;
+    basic_info : opt CompanyBasicInfo;
+    web3_identity : opt Web3Identity;
+    cross_chain_presence : opt CrossChainPresence;
+    team_members : opt vec TeamMember;
+};
+
+type SearchFilters = record {
+    status : opt CompanyStatus;
+    focus_areas : opt vec text;
+    min_verification_score : opt nat32;
+    has_github : opt bool;
+    has_contracts : opt bool;
+};
+
+type RegistryResult = variant {
+    Ok : text;
+    Err : text;
+};
+
+type CompanyResult = variant {
+    Ok : Company;
+    Err : text;
+};
+
+type UpdateResult = variant {
+    Ok;
+    Err : text;
+};
+
+type VerificationType = variant {
+    GitHub;
+    Domain;
+    Twitter;
+    Discord;
+    Telegram;
+};
+
+type VerificationResult = record {
+    success : bool;
+    message : text;
+    verified_at : opt nat64;
+};
+
+type DomainVerificationChallenge = record {
+    company_id : text;
+    domain : text;
+    challenge_token : text;
+    created_at : nat64;
+    expires_at : nat64;
+};
+
+type VerificationResultResponse = variant {
+    Ok : VerificationResult;
+    Err : text;
+};
+
+type ChallengeResult = variant {
+    Ok : DomainVerificationChallenge;
+    Err : text;
+};
+
+type ChainType = variant {
+    Ethereum;
+    Bitcoin;
+    ICP;
+    Polygon;
+};
+
+type CrossChainVerificationMethod = variant {
+    SignMessage : record { message : text };
+    DeploySpecialContract : record { verification_code : text };
+    SetPublicVariable : record { variable_name : text; value : text };
+    SpecialTransaction : record { transaction_data : text };
+};
+
+type CrossChainVerificationRequest = record {
+    company_id : text;
+    chain_type : ChainType;
+    address_or_contract : text;
+    verification_method : CrossChainVerificationMethod;
+};
+
+type CrossChainChallenge = record {
+    company_id : text;
+    chain_type : ChainType;
+    address_or_contract : text;
+    challenge_message : text;
+    verification_method : CrossChainVerificationMethod;
+    created_at : nat64;
+    expires_at : nat64;
+};
+
+type CrossChainChallengeResult = variant {
+    Ok : CrossChainChallenge;
+    Err : text;
+};
+
+type EndorsementResult = variant {
+    Ok;
+    Err : text;
+};
+
+type EndorsementsResult = variant {
+    Ok : vec Endorsement;
+    Err : text;
+};
+
+type TestimonialsResult = variant {
+    Ok : vec Testimonial;
+    Err : text;
+};
+
+type VouchesResult = variant {
+    Ok : vec Vouch;
+    Err : text;
+};
+
+type CommunityValidationResult = variant {
+    Ok : CommunityValidation;
+    Err : text;
+};
+
+type CommunityValidationStats = record {
+    total_endorsements : nat32;
+    total_testimonials : nat32;
+    total_vouches : nat32;
+    verified_testimonials : nat32;
+    reputation_score : nat32;
+    reputation_staked : nat64;
+};
+
+type CommunityValidationStatsResult = variant {
+    Ok : CommunityValidationStats;
+    Err : text;
+};
+
+type ReputationLeaderboard = record {
+    company_id : text;
+    company_name : text;
+    reputation_score : nat32;
+    reputation_staked : nat64;
+};
+
+type EndorsementsByCompanyResult = variant {
+    Ok : vec record { text; Endorsement };
+    Err : text;
+};
+
+type EligibilityResult = variant {
+    Ok : bool;
+    Err : text;
+};
+
 service : {
-    "greet": (text) -> (text) query;
+    // Core CRUD operations
+    "create_company" : (CreateCompanyRequest) -> (RegistryResult);
+    "get_company" : (text) -> (CompanyResult) query;
+    "update_company" : (UpdateCompanyRequest) -> (UpdateResult);
+    "list_companies" : (opt nat32, opt nat32, opt SearchFilters) -> (vec Company) query;
+    "search_companies" : (text) -> (vec Company) query;
+    
+    // Statistics and utilities
+    "get_company_count" : () -> (nat64) query;
+    "get_statistics" : () -> (vec record { text; nat64 }) query;
+    
+    // Multi-signal verification functions
+    "verify_github_organization" : (text, text) -> (VerificationResultResponse);
+    "create_domain_verification_challenge" : (text) -> (ChallengeResult);
+    "verify_domain_ownership" : (text) -> (VerificationResultResponse);
+    "verify_social_media_manual" : (text, text, text) -> (VerificationResultResponse);
+    
+    // Verification utilities
+    "get_domain_verification_challenge" : (text) -> (opt DomainVerificationChallenge) query;
+    "get_verification_instructions" : (VerificationType) -> (text) query;
+    
+    // Cross-chain verification functions
+    "create_crosschain_challenge" : (CrossChainVerificationRequest) -> (CrossChainChallengeResult);
+    "verify_ethereum_contract" : (text, text) -> (VerificationResultResponse);
+    "verify_bitcoin_address" : (text, text) -> (VerificationResultResponse);
+    "verify_icp_canister" : (text, text) -> (VerificationResultResponse);
+    "get_crosschain_verification_instructions" : (ChainType) -> (text) query;
+    "get_crosschain_challenges_for_company" : (text) -> (vec CrossChainChallenge) query;
+    
+    // Community validation - Endorsement functions
+    "add_endorsement" : (text, text, text) -> (EndorsementResult);
+    "remove_endorsement" : (text, text) -> (EndorsementResult);
+    "get_endorsements_for_company" : (text) -> (EndorsementsResult) query;
+    "get_endorsements_by_company" : (text) -> (EndorsementsByCompanyResult) query;
+    "validate_endorsement_eligibility" : (text, text) -> (EligibilityResult) query;
+    
+    // Community validation - Testimonial functions
+    "add_testimonial" : (text, text, text, text) -> (EndorsementResult);
+    "remove_testimonial" : (text, text) -> (EndorsementResult);
+    "verify_testimonial" : (text, text) -> (EndorsementResult);
+    "get_testimonials_for_company" : (text) -> (TestimonialsResult) query;
+    "get_testimonials_by_author" : (text) -> (vec record { text; Testimonial }) query;
+    "flag_testimonial" : (text, text) -> (EndorsementResult);
+    
+    // Community validation - Vouch functions
+    "add_vouch" : (text, text) -> (EndorsementResult);
+    "remove_vouch" : (text) -> (EndorsementResult);
+    "get_vouches_for_company" : (text) -> (VouchesResult) query;
+    "get_vouches_by_principal" : () -> (vec record { text; Vouch }) query;
+    
+    // Community validation - Reputation functions
+    "stake_reputation" : (text, nat64) -> (EndorsementResult);
+    "get_community_validation" : (text) -> (CommunityValidationResult) query;
+    "get_companies_by_reputation" : (nat32, opt nat32) -> (vec Company) query;
+    "get_community_validation_stats" : (text) -> (CommunityValidationStatsResult) query;
+    "get_reputation_leaderboard" : (opt nat32) -> (vec ReputationLeaderboard) query;
+    
+    // HTTP transform functions
+    "transform_github_response" : (record {
+        response : record {
+            status : nat;
+            body : blob;
+            headers : vec record { text; text };
+        };
+        context : blob;
+    }) -> (record {
+        status : nat;
+        body : blob;
+        headers : vec record { text; text };
+    }) query;
+    "transform_domain_response" : (record {
+        response : record {
+            status : nat;
+            body : blob;
+            headers : vec record { text; text };
+        };
+        context : blob;
+    }) -> (record {
+        status : nat;
+        body : blob;
+        headers : vec record { text; text };
+    }) query;
+    "transform_etherscan_response" : (record {
+        response : record {
+            status : nat;
+            body : blob;
+            headers : vec record { text; text };
+        };
+        context : blob;
+    }) -> (record {
+        status : nat;
+        body : blob;
+        headers : vec record { text; text };
+    }) query;
+    "transform_blockchain_response" : (record {
+        response : record {
+            status : nat;
+            body : blob;
+            headers : vec record { text; text };
+        };
+        context : blob;
+    }) -> (record {
+        status : nat;
+        body : blob;
+        headers : vec record { text; text };
+    }) query;
 }

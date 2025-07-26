@@ -15,6 +15,7 @@
 
 # rust
 target/
+Cargo.lock
 
 # frontend code
 node_modules/
@@ -23,3 +24,39 @@ dist/
 
 # environment variables
 .env
+
+# Test logs and reports
+test/logs/
+test_logs/
+*.log
+*.html
+
+# Temporary test files
+**/test_run_*.log
+**/crud_tests_*.log
+**/community_tests_*.log
+**/verification_tests_*.log
+**/error_tests_*.log
+**/performance_tests_*.log
+**/test_report_*.html
+**/benchmark_*.txt
+**/deploy_*.log
+**/data_generation_*.log
+
+# IDE and editor temporary files
+*.swp
+*.swo
+*~
+.#*
+\#*#
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# Local development files
+.local/
+.cache/
+
+# Claude Code
+.claude/

@@ -1,0 +1,81 @@
+{
+  "test_settings": {
+    "timeout_seconds": 30,
+    "retry_attempts": 3,
+    "parallel_test_limit": 5
+  },
+  "test_data": {
+    "sample_companies": [
+      {
+        "name": "DeFi Protocol Inc",
+        "description": "Leading DeFi protocol for automated market making",
+        "website": "https://defiprotocol.io",
+        "founding_date": "2023-03-15",
+        "team_size": 25,
+        "focus_areas": ["DeFi", "AMM", "Liquidity"],
+        "github_org": "defi-protocol",
+        "twitter_handle": "defiprotocol"
+      },
+      {
+        "name": "NFT Marketplace Corp",
+        "description": "Premier NFT marketplace with cross-chain support",
+        "website": "https://nftmarketplace.com",
+        "founding_date": "2022-08-20",
+        "team_size": 15,
+        "focus_areas": ["NFTs", "Marketplace", "Web3"],
+        "github_org": "nft-marketplace",
+        "twitter_handle": "nftmarketplace"
+      },
+      {
+        "name": "Cross-Chain Bridge LLC",
+        "description": "Secure and fast cross-chain asset transfers",
+        "website": "https://crosschainbridge.net",
+        "founding_date": "2024-01-10",
+        "team_size": 30,
+        "focus_areas": ["Bridge", "Interoperability", "Security"],
+        "github_org": "cross-chain-bridge",
+        "twitter_handle": "crosschainbridge"
+      }
+    ],
+    "test_addresses": {
+      "ethereum": [
+        "0x1234567890abcdef1234567890abcdef12345678",
+        "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        "0x9876543210fedcba9876543210fedcba98765432"
+      ],
+      "bitcoin": [
+        "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
+        "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+      ],
+      "icp": [
+        "rdmx6-jaaaa-aaaaa-aaadq-cai",
+        "rrkah-fqaaa-aaaah-qcuiq-cai",
+        "ryjl3-tyaaa-aaaaa-aaaba-cai"
+      ]
+    },
+    "test_testimonials": [
+      {
+        "author": "Alice Johnson",
+        "role": "Senior Developer",
+        "message": "Excellent company with innovative blockchain solutions"
+      },
+      {
+        "author": "Bob Smith",
+        "role": "Product Manager",
+        "message": "Great team culture and cutting-edge technology stack"
+      },
+      {
+        "author": "Carol Williams",
+        "role": "QA Engineer",
+        "message": "High quality code and rigorous testing practices"
+      }
+    ]
+  },
+  "expected_results": {
+    "min_verification_score": 10,
+    "max_verification_score": 100,
+    "reputation_score_threshold": 50,
+    "challenge_expiry_hours": 24
+  }
+}
