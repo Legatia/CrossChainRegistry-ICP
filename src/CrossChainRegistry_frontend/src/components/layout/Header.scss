@@ -1,0 +1,98 @@
+// Header.scss
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 1000;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  &__container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+  }
+
+  &__logo {
+    text-decoration: none;
+    font-size: 24px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+
+  &__nav-link {
+    text-decoration: none;
+    color: #6b7280;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    position: relative;
+
+    &:hover {
+      color: #667eea;
+    }
+
+    &.active {
+      color: #667eea;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #667eea;
+        border-radius: 1px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    &__container {
+      height: 60px;
+      padding: 0 16px;
+    }
+
+    &__logo {
+      font-size: 20px;
+    }
+
+    &__nav {
+      gap: 20px;
+    }
+
+    &__nav-link {
+      font-size: 14px;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    &__nav {
+      gap: 12px;
+    }
+
+    &__nav-link {
+      font-size: 13px;
+    }
+  }
+}

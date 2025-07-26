@@ -1,0 +1,20 @@
+// CompanyListingPage.scss
+
+.company-listing-page {
+  min-height: 100vh;
+  background: #f8fafc;
+
+  &__container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .company-listing-page {
+    &__container {
+      padding: 0 16px;
+    }
+  }
+}

@@ -22,6 +22,25 @@ node_modules/
 dist/
 .svelte-kit/
 
+# React/Vite build artifacts
+**/dist/
+**/build/
+.vite/
+**/coverage/
+
+# Testing artifacts
+coverage/
+**/coverage/
+.nyc_output/
+test-results/
+**/test-results/
+junit.xml
+coverage.xml
+
+# Vitest
+**/vitest.config.js.timestamp-*
+**/vite.config.js.timestamp-*
+
 # environment variables
 .env
 
