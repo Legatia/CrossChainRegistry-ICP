@@ -1,0 +1,213 @@
+// CompanyCard.scss
+
+.company-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  border: 1px solid #e5e7eb;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #1f2937;
+
+    a {
+      text-decoration: none;
+      color: inherit;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #667eea;
+      }
+    }
+  }
+
+  &__status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &--green {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    &--blue {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    &--orange {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    &--red {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    &--gray {
+      background: #f3f4f6;
+      color: #374151;
+    }
+  }
+
+  &__description {
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  &__details {
+    margin-bottom: 16px;
+  }
+
+  &__detail {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+
+    .label {
+      font-weight: 600;
+      color: #374151;
+      margin-right: 8px;
+      min-width: 100px;
+    }
+  }
+
+  &__link {
+    color: #667eea;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__score {
+    font-weight: 700;
+    color: #059669;
+  }
+
+  &__focus-areas {
+    margin-bottom: 16px;
+
+    .label {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      display: block;
+    }
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__tag {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+
+    &--more {
+      background: #e5e7eb;
+      color: #6b7280;
+    }
+  }
+
+  &__verification {
+    margin-bottom: 16px;
+  }
+
+  &__verification-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__community {
+    margin-bottom: 16px;
+  }
+
+  &__stats {
+    display: flex;
+    gap: 16px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    &__value {
+      font-weight: 700;
+      color: #1f2937;
+      font-size: 16px;
+    }
+
+    &__label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  &__footer {
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  &__created {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+}
+
+@media (max-width: 768px) {
+  .company-card {
+    padding: 16px;
+
+    &__header {
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    &__detail {
+      flex-direction: column;
+      align-items: flex-start;
+
+      .label {
+        min-width: auto;
+        margin-bottom: 4px;
+      }
+    }
+
+    &__stats {
+      justify-content: space-around;
+    }
+  }
+}

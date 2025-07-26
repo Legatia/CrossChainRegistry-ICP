@@ -1,0 +1,298 @@
+// HomePage.scss
+
+.home-page {
+  .hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 100px 0;
+    text-align: center;
+
+    &__container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    &__title {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin-bottom: 24px;
+      line-height: 1.1;
+    }
+
+    &__subtitle {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+      opacity: 0.9;
+    }
+
+    &__description {
+      font-size: 1.125rem;
+      margin-bottom: 40px;
+      opacity: 0.8;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    &__actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  }
+
+  .stats-section {
+    padding: 80px 0;
+    background: white;
+
+    &__container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: #1f2937;
+      margin-bottom: 48px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .stat-card {
+      background: #f8fafc;
+      padding: 32px 20px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+
+      &__value {
+        display: block;
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #667eea;
+        margin-bottom: 8px;
+      }
+
+      &__label {
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  .features-section {
+    padding: 80px 0;
+    background: #f8fafc;
+
+    &__container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: #1f2937;
+      margin-bottom: 48px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: white;
+      padding: 40px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      text-align: center;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: translateY(-4px);
+      }
+
+      &__icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+      }
+
+      h3 {
+        font-size: 1.5rem;
+        color: #1f2937;
+        margin-bottom: 16px;
+      }
+
+      p {
+        color: #6b7280;
+        line-height: 1.6;
+      }
+    }
+  }
+
+  .how-it-works {
+    padding: 80px 0;
+    background: white;
+
+    &__container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: #1f2937;
+      margin-bottom: 48px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 32px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .step {
+      text-align: center;
+
+      &__number {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: 800;
+        margin: 0 auto 20px;
+      }
+
+      &__content {
+        h3 {
+          font-size: 1.25rem;
+          color: #1f2937;
+          margin-bottom: 12px;
+        }
+
+        p {
+          color: #6b7280;
+          line-height: 1.6;
+        }
+      }
+    }
+  }
+
+  .cta-section {
+    padding: 80px 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+
+    &__container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+    }
+
+    p {
+      font-size: 1.125rem;
+      margin-bottom: 40px;
+      opacity: 0.9;
+    }
+
+    .cta-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .home-page {
+    .hero {
+      padding: 60px 0;
+
+      &__title {
+        font-size: 2.5rem;
+      }
+
+      &__subtitle {
+        font-size: 1.25rem;
+      }
+
+      &__actions {
+        flex-direction: column;
+        align-items: center;
+
+        .button {
+          width: 100%;
+          max-width: 300px;
+        }
+      }
+    }
+
+    .stats-section,
+    .features-section,
+    .how-it-works,
+    .cta-section {
+      padding: 60px 0;
+
+      h2 {
+        font-size: 2rem;
+      }
+    }
+
+    .features-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .steps {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+
+    .cta-actions {
+      flex-direction: column;
+      align-items: center;
+
+      .button {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+  }
+}

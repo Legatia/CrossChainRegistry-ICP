@@ -1,0 +1,183 @@
+// CompanyListing.scss
+
+.company-listing {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+
+  &__header {
+    text-align: center;
+    margin-bottom: 40px;
+
+    h1 {
+      font-size: 2.5rem;
+      color: #1f2937;
+      margin-bottom: 16px;
+    }
+
+    &-subtitle {
+      font-size: 1.125rem;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+  }
+
+  &__stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 32px;
+
+    .stat {
+      text-align: center;
+
+      &__value {
+        display: block;
+        font-size: 2rem;
+        font-weight: 800;
+        color: #667eea;
+        margin-bottom: 4px;
+      }
+
+      &__label {
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  &__content {
+    margin-top: 32px;
+  }
+
+  &__results {
+    margin-bottom: 24px;
+
+    .results-count {
+      color: #6b7280;
+      font-size: 14px;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  &__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 40px;
+
+    .pagination__button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background: #5a67d8;
+        transform: translateY(-1px);
+      }
+
+      &:disabled {
+        background: #d1d5db;
+        cursor: not-allowed;
+        transform: none;
+      }
+    }
+
+    .pagination__info {
+      color: #6b7280;
+      font-weight: 600;
+    }
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+
+    h3 {
+      color: #374151;
+      margin-bottom: 12px;
+      font-size: 1.5rem;
+    }
+
+    p {
+      font-size: 16px;
+    }
+  }
+
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .company-listing {
+    padding: 24px 16px;
+
+    &__header {
+      h1 {
+        font-size: 2rem;
+      }
+    }
+
+    &__stats {
+      flex-direction: column;
+      gap: 16px;
+
+      .stat {
+        &__value {
+          font-size: 1.5rem;
+        }
+      }
+    }
+
+    &__grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    &__pagination {
+      flex-direction: column;
+      gap: 16px;
+
+      .pagination__button {
+        width: 100%;
+        max-width: 200px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .company-listing {
+    &__grid {
+      grid-template-columns: 1fr;
+    }
+
+    &__stats {
+      .stat {
+        &__value {
+          font-size: 1.25rem;
+        }
+      }
+    }
+  }
+}

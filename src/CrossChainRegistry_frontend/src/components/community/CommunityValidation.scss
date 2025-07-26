@@ -1,0 +1,299 @@
+// CommunityValidation.scss
+
+.community-validation {
+  margin-top: 40px;
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    h2 {
+      color: #1f2937;
+      margin: 0;
+    }
+
+    .reputation-score {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .score-label {
+        color: #6b7280;
+        font-weight: 600;
+      }
+
+      .score-value {
+        background: #059669;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 18px;
+      }
+    }
+  }
+
+  .validation-summary {
+    background: #f8fafc;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 32px;
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 24px;
+
+      .stat {
+        text-align: center;
+
+        &-value {
+          display: block;
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: #667eea;
+          margin-bottom: 4px;
+        }
+
+        &-label {
+          color: #6b7280;
+          font-weight: 600;
+          text-transform: uppercase;
+          font-size: 12px;
+          letter-spacing: 0.5px;
+        }
+      }
+    }
+  }
+
+  .validation-tabs {
+    display: flex;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 24px;
+
+    .tab-button {
+      background: none;
+      border: none;
+      padding: 12px 24px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: #667eea;
+      }
+
+      &.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
+      }
+    }
+  }
+
+  .validation-content {
+    .validation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+
+      h3 {
+        color: #374151;
+        margin: 0;
+      }
+
+      .add-button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+
+        &:hover {
+          background: #5a67d8;
+        }
+      }
+    }
+
+    .add-form {
+      background: #f9fafb;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border: 1px solid #e5e7eb;
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+
+        label {
+          display: block;
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+
+        input,
+        textarea {
+          width: 100%;
+          padding: 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+
+          &:focus {
+            outline: none;
+            border-color: #667eea;
+          }
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 100px;
+        }
+      }
+
+      .form-actions {
+        text-align: right;
+
+        button {
+          background: #059669;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+
+          &:hover:not(:disabled) {
+            background: #047857;
+          }
+
+          &:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+
+    .validation-list {
+      .empty-state {
+        text-align: center;
+        color: #6b7280;
+        font-style: italic;
+        padding: 40px 20px;
+      }
+
+      .validation-item {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+
+        .validation-meta {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 12px;
+          font-size: 14px;
+
+          .validation-author {
+            font-weight: 600;
+            color: #374151;
+          }
+
+          .validation-date {
+            color: #6b7280;
+          }
+
+          .verification-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+
+            &.verified {
+              background: #d1fae5;
+              color: #065f46;
+            }
+
+            &.unverified {
+              background: #fef3c7;
+              color: #92400e;
+            }
+          }
+
+          .vouch-weight {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+          }
+        }
+
+        .validation-message {
+          color: #374151;
+          line-height: 1.6;
+          margin: 0;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .community-validation {
+    .section-header {
+      flex-direction: column;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .validation-summary .summary-stats {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .validation-tabs {
+      flex-wrap: wrap;
+
+      .tab-button {
+        flex: 1;
+        min-width: 120px;
+      }
+    }
+
+    .validation-content {
+      .validation-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .add-form .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .validation-item .validation-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+    }
+  }
+}

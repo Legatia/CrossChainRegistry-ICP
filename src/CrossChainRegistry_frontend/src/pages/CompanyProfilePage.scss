@@ -1,0 +1,417 @@
+// CompanyProfilePage.scss
+
+.company-profile-page {
+  min-height: 100vh;
+  background: #f8fafc;
+
+  &__container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  .company-header {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &__main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    &__name {
+      font-size: 2.5rem;
+      color: #1f2937;
+      margin: 0;
+    }
+
+    &__status {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+
+      &--green {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      &--blue {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      &--orange {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      &--red {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      &--gray {
+        background: #f3f4f6;
+        color: #374151;
+      }
+    }
+
+    &__info {
+      margin-bottom: 24px;
+    }
+
+    &__website {
+      margin-bottom: 12px;
+
+      a {
+        color: #667eea;
+        text-decoration: none;
+        font-size: 1.125rem;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    &__meta {
+      display: flex;
+      gap: 24px;
+      color: #6b7280;
+      font-size: 14px;
+
+      span {
+        display: flex;
+        align-items: center;
+      }
+    }
+
+    &__score {
+      text-align: center;
+
+      .score-circle {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        color: white;
+
+        .score-value {
+          font-size: 2rem;
+          font-weight: 800;
+          margin-bottom: 4px;
+        }
+
+        .score-label {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      }
+    }
+  }
+
+  .company-section {
+    background: white;
+    padding: 32px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    h2 {
+      color: #1f2937;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+
+    h3 {
+      color: #374151;
+      margin-bottom: 16px;
+      font-size: 1.25rem;
+    }
+  }
+
+  .company-description {
+    color: #374151;
+    line-height: 1.6;
+    font-size: 16px;
+  }
+
+  .focus-areas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .focus-area-tag {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+  }
+
+  .web3-identity {
+    .identity-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+
+      .label {
+        font-weight: 600;
+        color: #374151;
+        min-width: 160px;
+      }
+
+      .identity-link {
+        color: #667eea;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      .identity-value {
+        color: #6b7280;
+      }
+
+      .verification-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+
+        &.verified {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        &.unverified {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+      }
+    }
+  }
+
+  .cross-chain-presence {
+    .chain-section {
+      margin-bottom: 32px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .address-list {
+      .address-item {
+        background: #f9fafb;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border: 1px solid #e5e7eb;
+
+        .address-link {
+          color: #667eea;
+          text-decoration: none;
+          font-family: monospace;
+          font-size: 14px;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+
+    .wallet-list,
+    .token-list {
+      .wallet-item,
+      .token-item {
+        background: #f9fafb;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border: 1px solid #e5e7eb;
+
+        .wallet-info,
+        .token-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+
+          .wallet-chain,
+          .token-chain {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+          }
+
+          .wallet-type {
+            color: #6b7280;
+            font-size: 14px;
+          }
+
+          .token-name {
+            font-weight: 600;
+            color: #374151;
+          }
+
+          .wallet-status,
+          .token-status {
+            &.verified {
+              color: #059669;
+            }
+
+            &.unverified {
+              color: #d97706;
+            }
+          }
+        }
+
+        .wallet-address,
+        .token-address {
+          font-family: monospace;
+          font-size: 13px;
+          color: #6b7280;
+          word-break: break-all;
+        }
+      }
+    }
+  }
+
+  .team-members {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+
+    .team-member {
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+
+      .member-info {
+        margin-bottom: 12px;
+
+        .member-name {
+          font-size: 1.125rem;
+          color: #1f2937;
+          margin-bottom: 4px;
+        }
+
+        .member-role {
+          color: #6b7280;
+          font-size: 14px;
+          margin-bottom: 8px;
+          display: block;
+        }
+
+        .member-status {
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+
+          &.verified {
+            background: #d1fae5;
+            color: #065f46;
+          }
+
+          &.unverified {
+            background: #fef3c7;
+            color: #92400e;
+          }
+        }
+      }
+
+      .member-links {
+        display: flex;
+        gap: 12px;
+
+        a {
+          color: #667eea;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 500;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .company-profile-page {
+    &__container {
+      padding: 24px 16px;
+    }
+
+    .company-header {
+      padding: 24px;
+
+      &__main {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      &__name {
+        font-size: 2rem;
+      }
+
+      &__meta {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      &__score .score-circle {
+        width: 100px;
+        height: 100px;
+
+        .score-value {
+          font-size: 1.5rem;
+        }
+      }
+    }
+
+    .company-section {
+      padding: 20px;
+    }
+
+    .web3-identity .identity-item {
+      flex-direction: column;
+      align-items: flex-start;
+
+      .label {
+        min-width: auto;
+        margin-bottom: 4px;
+      }
+    }
+
+    .team-members {
+      grid-template-columns: 1fr;
+    }
+  }
+}
