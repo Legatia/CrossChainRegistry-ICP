@@ -114,6 +114,15 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
             {company.cross_chain_presence.icp_canisters.length > 0 && (
               <span className="badge badge--icp">ICP</span>
             )}
+            {company.cross_chain_presence.solana_addresses.length > 0 && (
+              <span className="badge badge--solana">Solana</span>
+            )}
+            {company.cross_chain_presence.sui_addresses.length > 0 && (
+              <span className="badge badge--sui">Sui</span>
+            )}
+            {company.cross_chain_presence.ton_addresses.length > 0 && (
+              <span className="badge badge--ton">TON</span>
+            )}
           </div>
         </div>
 

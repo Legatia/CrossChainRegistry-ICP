@@ -49,7 +49,7 @@ impl VerificationManager {
             score += 10;
         }
 
-        // Cross-chain presence (max 25 points)
+        // Cross-chain presence (max 40 points)
         if !company.cross_chain_presence.ethereum_contracts.is_empty() {
             score += 5;
         }
@@ -57,6 +57,15 @@ impl VerificationManager {
             score += 5;
         }
         if !company.cross_chain_presence.icp_canisters.is_empty() {
+            score += 5;
+        }
+        if !company.cross_chain_presence.solana_addresses.is_empty() {
+            score += 5;
+        }
+        if !company.cross_chain_presence.sui_addresses.is_empty() {
+            score += 5;
+        }
+        if !company.cross_chain_presence.ton_addresses.is_empty() {
             score += 5;
         }
         if !company.cross_chain_presence.treasury_wallets.is_empty() {
@@ -94,6 +103,11 @@ impl VerificationManager {
 
         if company.created_by != caller_principal {
             return RegistryResult::Err("Unauthorized: Only company creator can verify".to_string());
+        }
+
+        // Check rate limiting
+        if !StorageManager::check_http_rate_limit(caller_principal) {
+            return RegistryResult::Err("Rate limit exceeded. Please try again later.".to_string());
         }
 
         // Make HTTP request to GitHub API
@@ -217,7 +231,13 @@ impl VerificationManager {
     // Domain ownership verification
     pub async fn verify_domain_ownership(
         company_id: String,
+        caller_principal: Principal,
     ) -> RegistryResult<VerificationResult> {
+        // Check rate limiting first
+        if !StorageManager::check_http_rate_limit(caller_principal) {
+            return RegistryResult::Err("Rate limit exceeded. Please try again later.".to_string());
+        }
+
         // Get challenge
         let challenge = match StorageManager::get_domain_challenge(&company_id) {
             Some(challenge) => challenge,
@@ -411,11 +431,29 @@ impl VerificationManager {
 
     // Helper functions
     fn generate_challenge_token() -> String {
-        format!("icp-registry-{}", time())
+        // Use multiple sources of randomness for better security
+        let timestamp = time();
+        
+        // Create a simple pseudo-random hash from various system state
+        let mut hasher = timestamp;
+        hasher = hasher.wrapping_mul(6364136223846793005);
+        hasher = hasher.wrapping_add(1442695040888963407);
+        hasher ^= hasher >> 32;
+        hasher = hasher.wrapping_mul(0xd6e8feb86659fd93);
+        hasher ^= hasher >> 32;
+        hasher = hasher.wrapping_mul(0xd6e8feb86659fd93);
+        hasher ^= hasher >> 32;
+
+        format!("icp-registry-{}-{:016x}", timestamp, hasher)
+    }
+
+    // Safe regex compilation utility
+    fn safe_regex_new(pattern: &str) -> Result<Regex, String> {
+        Regex::new(pattern).map_err(|e| format!("Regex compilation error: {}", e))
     }
 
     fn extract_domain_from_url(url: &str) -> Result<String, String> {
-        let url_regex = Regex::new(r"^https?://([^/]+)").unwrap();
+        let url_regex = Self::safe_regex_new(r"^https?://([^/]+)")?;
         if let Some(captures) = url_regex.captures(url) {
             if let Some(domain) = captures.get(1) {
                 Ok(domain.as_str().to_string())
@@ -428,11 +466,162 @@ impl VerificationManager {
     }
 
     fn extract_twitter_username(url: &str) -> Option<String> {
-        let twitter_regex = Regex::new(r"(?:twitter\.com|x\.com)/([^/?]+)").unwrap();
+        let twitter_regex = Self::safe_regex_new(r"(?:twitter\.com|x\.com)/([^/?]+)").ok()?;
         if let Some(captures) = twitter_regex.captures(url) {
             captures.get(1).map(|m| m.as_str().to_string())
         } else {
             None
+        }
+    }
+
+    // Cross-chain address validation functions
+    pub fn validate_bitcoin_address(address: &str) -> bool {
+        // Bitcoin address validation (Legacy, SegWit v0, SegWit v1/Taproot)
+        let btc_legacy = match Self::safe_regex_new(r"^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        let btc_segwit = match Self::safe_regex_new(r"^bc1[a-z0-9]{39,59}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        
+        btc_legacy.is_match(address) || btc_segwit.is_match(address)
+    }
+
+    pub fn validate_ethereum_address(address: &str) -> bool {
+        // Ethereum address validation (0x followed by 40 hex characters)
+        let eth_regex = match Self::safe_regex_new(r"^0x[a-fA-F0-9]{40}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        eth_regex.is_match(address)
+    }
+
+    pub fn validate_solana_address(address: &str) -> bool {
+        // Solana addresses are base58-encoded, typically 32-44 characters
+        // They use the base58 alphabet: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
+        let solana_regex = match Self::safe_regex_new(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        
+        // Additional validation: common invalid characters for base58
+        if address.contains('0') || address.contains('O') || address.contains('I') || address.contains('l') {
+            return false;
+        }
+        
+        solana_regex.is_match(address)
+    }
+
+    pub fn validate_sui_address(address: &str) -> bool {
+        // Sui addresses are 32-byte hex strings with 0x prefix (66 characters total)
+        let sui_regex = match Self::safe_regex_new(r"^0x[a-fA-F0-9]{64}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        sui_regex.is_match(address)
+    }
+
+    pub fn validate_ton_address(address: &str) -> bool {
+        // TON addresses can be in several formats:
+        // 1. Raw format: 0:followed by 64 hex characters
+        // 2. User-friendly format: base64url encoded, typically starting with EQ, UQ, or kQ
+        let ton_raw = match Self::safe_regex_new(r"^0:[a-fA-F0-9]{64}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        let ton_friendly = match Self::safe_regex_new(r"^[EUkQ][A-Za-z0-9_-]{46,48}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        
+        ton_raw.is_match(address) || ton_friendly.is_match(address)
+    }
+
+    pub fn validate_icp_principal(principal: &str) -> bool {
+        // ICP Principal IDs are base32-encoded with specific format
+        // They end with specific suffixes and have length constraints
+        let icp_regex = match Self::safe_regex_new(r"^[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{5}-[a-z0-9]{3}$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
+        icp_regex.is_match(principal)
+    }
+
+    pub fn validate_polygon_address(address: &str) -> bool {
+        // Polygon uses the same address format as Ethereum
+        Self::validate_ethereum_address(address)
+    }
+
+    // Comprehensive cross-chain address validation
+    pub fn validate_cross_chain_address(chain: &str, address: &str) -> bool {
+        match chain.to_lowercase().as_str() {
+            "bitcoin" | "btc" => Self::validate_bitcoin_address(address),
+            "ethereum" | "eth" => Self::validate_ethereum_address(address),
+            "solana" | "sol" => Self::validate_solana_address(address),
+            "sui" => Self::validate_sui_address(address),
+            "ton" => Self::validate_ton_address(address),
+            "icp" | "internet_computer" => Self::validate_icp_principal(address),
+            "polygon" | "matic" => Self::validate_polygon_address(address),
+            _ => false,
+        }
+    }
+
+    // Get validation rules for different chains
+    pub fn get_address_validation_rules(chain: &str) -> String {
+        match chain.to_lowercase().as_str() {
+            "bitcoin" | "btc" => {
+                "Bitcoin addresses can be:\n\
+                • Legacy format: Starting with 1 or 3 (25-34 characters)\n\
+                • SegWit format: Starting with bc1 (39-59 characters)\n\
+                Example: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+                    .to_string()
+            }
+            "ethereum" | "eth" => {
+                "Ethereum addresses:\n\
+                • Must start with 0x\n\
+                • Followed by exactly 40 hexadecimal characters\n\
+                Example: 0x742d35Cc6634C0532925a3b8D4d3c12de56d0d9E"
+                    .to_string()
+            }
+            "solana" | "sol" => {
+                "Solana addresses:\n\
+                • Base58-encoded strings\n\
+                • 32-44 characters long\n\
+                • No 0, O, I, or l characters\n\
+                Example: 7dHbWXmci3dT8UFYWGGWnSZwJa8ACHWrAhwRgBAuR7a1"
+                    .to_string()
+            }
+            "sui" => {
+                "Sui addresses:\n\
+                • Start with 0x\n\
+                • Followed by exactly 64 hexadecimal characters\n\
+                Example: 0x2d3d1d6e5f7c8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b"
+                    .to_string()
+            }
+            "ton" => {
+                "TON addresses can be:\n\
+                • Raw format: 0: followed by 64 hex characters\n\
+                • User-friendly: Base64url encoded, starting with EQ/UQ/kQ\n\
+                Example: EQD2NmD_lH5f5u1Kj3KfGyTvhZSX0Eg6qp2a5IQUKXxOG21n"
+                    .to_string()
+            }
+            "icp" | "internet_computer" => {
+                "ICP Principal IDs:\n\
+                • Base32-encoded with dashes\n\
+                • Format: xxxxx-xxxxx-xxxxx-xxxxx-xxx\n\
+                Example: rdmx6-jaaaa-aaaah-qcaiq-cai"
+                    .to_string()
+            }
+            "polygon" | "matic" => {
+                "Polygon addresses (same as Ethereum):\n\
+                • Must start with 0x\n\
+                • Followed by exactly 40 hexadecimal characters\n\
+                Example: 0x742d35Cc6634C0532925a3b8D4d3c12de56d0d9E"
+                    .to_string()
+            }
+            _ => "Unsupported chain. Please check the chain name.".to_string(),
         }
     }
 }

@@ -32,6 +32,9 @@ pub struct CrossChainPresence {
     pub bitcoin_addresses: Vec<String>,
     pub icp_canisters: Vec<String>,
     pub polygon_contracts: Vec<String>,
+    pub solana_addresses: Vec<String>,
+    pub sui_addresses: Vec<String>,
+    pub ton_addresses: Vec<String>,
     pub treasury_wallets: Vec<WalletInfo>,
     pub token_contracts: Vec<TokenInfo>,
 }
@@ -253,6 +256,9 @@ pub enum ChainType {
     Bitcoin,
     ICP,
     Polygon,
+    Solana,
+    Sui,
+    TON,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]

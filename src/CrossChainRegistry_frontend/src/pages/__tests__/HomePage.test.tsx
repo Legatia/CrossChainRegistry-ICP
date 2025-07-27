@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../../test/utils/testUtils';
+import { screen, waitFor } from '../../test/utils/testUtils';
+import { renderWithRouter } from '../../test/utils/routerTestUtils';
 import HomePage from '../HomePage';
 import { registryApi } from '../../services/api';
 import { mockRegistryStatistics } from '../../test/mocks/mockData';
@@ -18,34 +19,35 @@ describe('HomePage', () => {
 
   describe('Static Content Rendering', () => {
     it('should render hero section with main title and subtitle', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText('CrossChain Registry')).toBeInTheDocument();
       expect(screen.getByText('The definitive registry for verified Web3 companies and cross-chain presence')).toBeInTheDocument();
     });
 
     it('should render hero description', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText(/discover legitimate web3 companies/i)).toBeInTheDocument();
       expect(screen.getByText(/protect yourself from scams/i)).toBeInTheDocument();
     });
 
     it('should render call-to-action buttons in hero', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       const browseButton = screen.getByRole('link', { name: 'Browse Companies' });
-      const registerButton = screen.getByRole('link', { name: 'Register Your Company' });
+      const registerButtons = screen.getAllByRole('link', { name: 'Register Your Company' });
+      const heroRegisterButton = registerButtons.find(btn => btn.closest('.hero'));
 
       expect(browseButton).toBeInTheDocument();
       expect(browseButton).toHaveAttribute('href', '/companies');
 
-      expect(registerButton).toBeInTheDocument();
-      expect(registerButton).toHaveAttribute('href', '/register');
+      expect(heroRegisterButton).toBeInTheDocument();
+      expect(heroRegisterButton).toHaveAttribute('href', '/register');
     });
 
     it('should render features section', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText('Why Use CrossChain Registry?')).toBeInTheDocument();
 
@@ -64,16 +66,22 @@ describe('HomePage', () => {
     });
 
     it('should render how it works section', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText('How It Works')).toBeInTheDocument();
 
       const steps = [
-        'Register Your Company',
         'Complete Verification',
         'Build Community Trust',
         'Gain Trusted Status',
       ];
+
+      // Check for the "Register Your Company" step specifically in the how-it-works section
+      const howItWorksSection = screen.getByText('How It Works').closest('.how-it-works');
+      expect(howItWorksSection).toBeInTheDocument();
+      if (howItWorksSection) {
+        expect(howItWorksSection).toHaveTextContent('Register Your Company');
+      }
 
       steps.forEach(step => {
         expect(screen.getByText(step)).toBeInTheDocument();
@@ -81,7 +89,7 @@ describe('HomePage', () => {
     });
 
     it('should render final CTA section', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText('Ready to Get Started?')).toBeInTheDocument();
       
@@ -99,7 +107,7 @@ describe('HomePage', () => {
       const mockGetStats = vi.mocked(registryApi.getRegistryStatistics);
       mockGetStats.mockImplementation(() => new Promise(() => {})); // Never resolves
 
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText('Loading statistics...')).toBeInTheDocument();
     });
@@ -108,7 +116,7 @@ describe('HomePage', () => {
       const mockGetStats = vi.mocked(registryApi.getRegistryStatistics);
       mockGetStats.mockResolvedValue(mockRegistryStatistics);
 
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       await waitFor(() => {
         expect(screen.getByText(mockRegistryStatistics.total_companies.toString())).toBeInTheDocument();
@@ -122,7 +130,7 @@ describe('HomePage', () => {
       const mockGetStats = vi.mocked(registryApi.getRegistryStatistics);
       mockGetStats.mockResolvedValue(mockRegistryStatistics);
 
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       await waitFor(() => {
         expect(screen.getByText('Total Companies')).toBeInTheDocument();
@@ -143,7 +151,7 @@ describe('HomePage', () => {
         average_reputation_score: 67.8,
       });
 
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       await waitFor(() => {
         expect(screen.getByText('68')).toBeInTheDocument();
@@ -154,7 +162,7 @@ describe('HomePage', () => {
       const mockGetStats = vi.mocked(registryApi.getRegistryStatistics);
       mockGetStats.mockRejectedValue(new Error('Network error'));
 
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       await waitFor(() => {
         expect(screen.getByText('Failed to load statistics')).toBeInTheDocument();
@@ -165,7 +173,7 @@ describe('HomePage', () => {
       const mockGetStats = vi.mocked(registryApi.getRegistryStatistics);
       mockGetStats.mockResolvedValue(mockRegistryStatistics);
 
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(mockGetStats).toHaveBeenCalledTimes(1);
     });
@@ -173,7 +181,7 @@ describe('HomePage', () => {
 
   describe('Feature Cards', () => {
     it('should render feature cards with emojis', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       const emojiElements = [
         '🔍', // Scam Protection
@@ -190,7 +198,7 @@ describe('HomePage', () => {
     });
 
     it('should render feature descriptions', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText(/advanced verification systems help identify/i)).toBeInTheDocument();
       expect(screen.getByText(/verify company presence across ethereum/i)).toBeInTheDocument();
@@ -200,7 +208,7 @@ describe('HomePage', () => {
 
   describe('How It Works Steps', () => {
     it('should render numbered steps', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       // Check for step numbers
       expect(screen.getByText('1')).toBeInTheDocument();
@@ -210,7 +218,7 @@ describe('HomePage', () => {
     });
 
     it('should render step descriptions', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       expect(screen.getByText(/submit basic information, web3 identity/i)).toBeInTheDocument();
       expect(screen.getByText(/verify github organization, domain ownership/i)).toBeInTheDocument();
@@ -221,7 +229,7 @@ describe('HomePage', () => {
 
   describe('Links and Navigation', () => {
     it('should have correct navigation links', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       const browseLinks = screen.getAllByRole('link', { name: /browse companies|explore companies/i });
       const registerLinks = screen.getAllByRole('link', { name: /register your company/i });
@@ -236,16 +244,29 @@ describe('HomePage', () => {
     });
 
     it('should have proper button styling classes', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
-      const primaryButtons = screen.getAllByRole('link', { name: /register your company/i });
-      const secondaryButtons = screen.getAllByRole('link', { name: /browse companies|explore companies/i });
+      const registerButtons = screen.getAllByRole('link', { name: /register your company/i });
+      const browseButtons = screen.getAllByRole('link', { name: /browse companies/i });
+      const exploreButtons = screen.getAllByRole('link', { name: /explore companies/i });
 
-      primaryButtons.forEach(button => {
+      // Hero register button should be secondary, CTA register button should be primary
+      const heroRegisterButton = registerButtons.find(btn => btn.closest('.hero'));
+      const ctaRegisterButton = registerButtons.find(btn => btn.closest('.cta-section'));
+
+      if (heroRegisterButton) {
+        expect(heroRegisterButton).toHaveClass('button', 'button--secondary');
+      }
+      if (ctaRegisterButton) {
+        expect(ctaRegisterButton).toHaveClass('button', 'button--primary');
+      }
+
+      // Browse/explore buttons styling
+      browseButtons.forEach(button => {
         expect(button).toHaveClass('button', 'button--primary');
       });
 
-      secondaryButtons.forEach(button => {
+      exploreButtons.forEach(button => {
         expect(button).toHaveClass('button', 'button--secondary');
       });
     });
@@ -253,7 +274,7 @@ describe('HomePage', () => {
 
   describe('Component Structure', () => {
     it('should have proper semantic HTML structure', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       // Check for main sections
       const heroSection = screen.getByText('CrossChain Registry').closest('section');
@@ -270,7 +291,7 @@ describe('HomePage', () => {
     });
 
     it('should render in the correct order', () => {
-      render(<HomePage />);
+      renderWithRouter(<HomePage />);
 
       const sections = document.querySelectorAll('section');
       

@@ -61,6 +61,9 @@ impl CrossChainVerifier {
             ChainType::Bitcoin => "bitcoin", 
             ChainType::ICP => "icp",
             ChainType::Polygon => "polygon",
+            ChainType::Solana => "solana",
+            ChainType::Sui => "sui",
+            ChainType::TON => "ton",
         };
 
         let challenge_key = StorageManager::generate_crosschain_challenge_key(
@@ -342,12 +345,30 @@ impl CrossChainVerifier {
                     return Err("Invalid ICP canister ID format".to_string());
                 }
             }
+            ChainType::Solana => {
+                if address.len() < 32 || address.len() > 44 {
+                    return Err("Invalid Solana address format".to_string());
+                }
+            }
+            ChainType::Sui => {
+                if !address.starts_with("0x") || address.len() != 66 {
+                    return Err("Invalid Sui address format".to_string());
+                }
+            }
+            ChainType::TON => {
+                if !(address.starts_with("0:") || address.starts_with("EQ") || address.starts_with("UQ") || address.starts_with("kQ")) {
+                    return Err("Invalid TON address format".to_string());
+                }
+            }
         }
         Ok(())
     }
 
     fn is_valid_canister_id(canister_id: &str) -> bool {
-        let canister_regex = Regex::new(r"^[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+$").unwrap();
+        let canister_regex = match Regex::new(r"^[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+$") {
+            Ok(regex) => regex,
+            Err(_) => return false,
+        };
         canister_regex.is_match(canister_id)
     }
 
@@ -413,6 +434,27 @@ impl CrossChainVerifier {
                 2. Send a transaction to your contract with the challenge message\n\
                 3. Call verify_polygon_contract to complete verification\n\
                 4. Similar to Ethereum verification process".to_string()
+            }
+            ChainType::Solana => {
+                "To verify Solana address ownership:\n\
+                1. Create a cross-chain verification challenge for your Solana address\n\
+                2. Send a transaction from your address or create a program interaction\n\
+                3. Call verify_solana_address to complete verification\n\
+                4. The system will verify address activity and ownership".to_string()
+            }
+            ChainType::Sui => {
+                "To verify Sui address ownership:\n\
+                1. Create a cross-chain verification challenge for your Sui address\n\
+                2. Perform a transaction or object interaction from your address\n\
+                3. Call verify_sui_address to complete verification\n\
+                4. The system will verify address activity on Sui network".to_string()
+            }
+            ChainType::TON => {
+                "To verify TON address ownership:\n\
+                1. Create a cross-chain verification challenge for your TON address\n\
+                2. Send a transaction or message from your address\n\
+                3. Call verify_ton_address to complete verification\n\
+                4. The system will verify address activity and ownership".to_string()
             }
         }
     }
