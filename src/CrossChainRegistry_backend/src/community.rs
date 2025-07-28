@@ -118,15 +118,27 @@ impl CommunityValidationManager {
             return RegistryResult::Err("Company not found".to_string());
         }
 
-        // Basic validation
+        // Input validation with length limits
         if author_name.trim().is_empty() {
             return RegistryResult::Err("Author name cannot be empty".to_string());
+        }
+        if author_name.len() > 100 {
+            return RegistryResult::Err("Author name exceeds 100 characters".to_string());
         }
         if role.trim().is_empty() {
             return RegistryResult::Err("Role cannot be empty".to_string());
         }
+        if role.len() > 100 {
+            return RegistryResult::Err("Role exceeds 100 characters".to_string());
+        }
         if message.trim().is_empty() {
             return RegistryResult::Err("Message cannot be empty".to_string());
+        }
+        if message.len() > 1000 {
+            return RegistryResult::Err("Message exceeds 1000 characters".to_string());
+        }
+        if message.len() > 1000 {
+            return RegistryResult::Err("Message exceeds 1000 characters".to_string());
         }
 
         // Check if testimonial from this principal already exists
@@ -258,6 +270,9 @@ impl CommunityValidationManager {
 
         if message.trim().is_empty() {
             return RegistryResult::Err("Message cannot be empty".to_string());
+        }
+        if message.len() > 1000 {
+            return RegistryResult::Err("Message exceeds 1000 characters".to_string());
         }
 
         // Check if vouch from this principal already exists

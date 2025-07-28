@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { registryApi } from '../../services/api';
 import { CompanyFormData, VerificationStatus } from '../../types';
+import { 
+  sanitizeInput, 
+  validateInput, 
+  validateForm, 
+  defaultRateLimiter,
+  INPUT_LIMITS 
+} from '../../utils/validation';
 import './CompanyRegistrationForm.scss';
 
 const CompanyRegistrationForm: React.FC = () => {
@@ -26,6 +33,9 @@ const CompanyRegistrationForm: React.FC = () => {
       bitcoin_addresses: [],
       icp_canisters: [],
       polygon_contracts: [],
+      solana_addresses: [],
+      sui_addresses: [],
+      ton_addresses: [],
       treasury_wallets: [],
       token_contracts: []
     },
@@ -35,6 +45,7 @@ const CompanyRegistrationForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const focusAreaOptions = [
     'DeFi', 'NFTs', 'Gaming', 'Infrastructure', 'DAOs', 'Metaverse',
@@ -42,23 +53,65 @@ const CompanyRegistrationForm: React.FC = () => {
   ];
 
   const handleBasicInfoChange = (field: string, value: any) => {
+    // Sanitize input based on field type
+    let sanitizedValue = value;
+    if (typeof value === 'string') {
+      if (field === 'website') {
+        sanitizedValue = sanitizeInput.url(value);
+      } else {
+        sanitizedValue = sanitizeInput.text(value);
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       basic_info: {
         ...prev.basic_info,
-        [field]: value
+        [field]: sanitizedValue
       }
     }));
+    
+    // Clear validation error for this field
+    if (validationErrors[`basic_info.${field}`]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[`basic_info.${field}`];
+        return newErrors;
+      });
+    }
   };
 
   const handleWeb3IdentityChange = (field: string, value: any) => {
+    // Sanitize input based on field type
+    let sanitizedValue = value;
+    if (typeof value === 'string') {
+      if (field === 'twitter_handle') {
+        sanitizedValue = sanitizeInput.handle(value, 'twitter');
+      } else if (field === 'discord_server') {
+        sanitizedValue = sanitizeInput.handle(value, 'discord');
+      } else if (field === 'telegram_channel') {
+        sanitizedValue = sanitizeInput.handle(value, 'telegram');
+      } else {
+        sanitizedValue = sanitizeInput.text(value);
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       web3_identity: {
         ...prev.web3_identity,
-        [field]: value
+        [field]: sanitizedValue
       }
     }));
+    
+    // Clear validation error for this field
+    if (validationErrors[`web3_identity.${field}`]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[`web3_identity.${field}`];
+        return newErrors;
+      });
+    }
   };
 
   const handleFocusAreaToggle = (area: string) => {
@@ -106,39 +159,126 @@ const CompanyRegistrationForm: React.FC = () => {
   };
 
   const addEthereumContract = () => {
-    const contract = prompt('Enter Ethereum contract address:');
-    if (contract && contract.trim()) {
+    const contract = prompt('Enter Ethereum contract address (0x followed by 40 hex characters):');
+    if (contract) {
+      const sanitized = sanitizeInput.address(contract);
+      const validation = validateInput.blockchainAddress(sanitized, 'ETHEREUM');
+      
+      if (!validation.valid) {
+        alert(`Invalid Ethereum address: ${validation.error}`);
+        return;
+      }
+      
       setFormData(prev => ({
         ...prev,
         cross_chain_presence: {
           ...prev.cross_chain_presence,
-          ethereum_contracts: [...prev.cross_chain_presence.ethereum_contracts, contract.trim()]
+          ethereum_contracts: [...prev.cross_chain_presence.ethereum_contracts, sanitized]
         }
       }));
     }
   };
 
   const addBitcoinAddress = () => {
-    const address = prompt('Enter Bitcoin address:');
-    if (address && address.trim()) {
+    const address = prompt('Enter Bitcoin address (Legacy, P2SH, or Bech32 format):');
+    if (address) {
+      const sanitized = sanitizeInput.address(address);
+      const validation = validateInput.blockchainAddress(sanitized, 'BITCOIN');
+      
+      if (!validation.valid) {
+        alert(`Invalid Bitcoin address: ${validation.error}`);
+        return;
+      }
+      
       setFormData(prev => ({
         ...prev,
         cross_chain_presence: {
           ...prev.cross_chain_presence,
-          bitcoin_addresses: [...prev.cross_chain_presence.bitcoin_addresses, address.trim()]
+          bitcoin_addresses: [...prev.cross_chain_presence.bitcoin_addresses, sanitized]
         }
       }));
     }
   };
 
   const addIcpCanister = () => {
-    const canister = prompt('Enter ICP canister ID:');
-    if (canister && canister.trim()) {
+    const canister = prompt('Enter ICP canister ID (format: xxxxx-xxxxx-xxxxx-xxxxx-xxx):');
+    if (canister) {
+      const sanitized = sanitizeInput.address(canister);
+      const validation = validateInput.blockchainAddress(sanitized, 'ICP_CANISTER');
+      
+      if (!validation.valid) {
+        alert(`Invalid ICP canister ID: ${validation.error}`);
+        return;
+      }
+      
       setFormData(prev => ({
         ...prev,
         cross_chain_presence: {
           ...prev.cross_chain_presence,
-          icp_canisters: [...prev.cross_chain_presence.icp_canisters, canister.trim()]
+          icp_canisters: [...prev.cross_chain_presence.icp_canisters, sanitized]
+        }
+      }));
+    }
+  };
+
+  const addSolanaAddress = () => {
+    const address = prompt('Enter Solana address (Base58 string, 32-44 characters):');
+    if (address) {
+      const sanitized = sanitizeInput.address(address);
+      const validation = validateInput.blockchainAddress(sanitized, 'SOLANA');
+      
+      if (!validation.valid) {
+        alert(`Invalid Solana address: ${validation.error}`);
+        return;
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        cross_chain_presence: {
+          ...prev.cross_chain_presence,
+          solana_addresses: [...prev.cross_chain_presence.solana_addresses, sanitized]
+        }
+      }));
+    }
+  };
+
+  const addSuiAddress = () => {
+    const address = prompt('Enter Sui address (0x followed by 64 hex characters):');
+    if (address) {
+      const sanitized = sanitizeInput.address(address);
+      const validation = validateInput.blockchainAddress(sanitized, 'SUI');
+      
+      if (!validation.valid) {
+        alert(`Invalid Sui address: ${validation.error}`);
+        return;
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        cross_chain_presence: {
+          ...prev.cross_chain_presence,
+          sui_addresses: [...prev.cross_chain_presence.sui_addresses, sanitized]
+        }
+      }));
+    }
+  };
+
+  const addTonAddress = () => {
+    const address = prompt('Enter TON address (Base64url format, 48 characters):');
+    if (address) {
+      const sanitized = sanitizeInput.address(address);
+      const validation = validateInput.blockchainAddress(sanitized, 'TON');
+      
+      if (!validation.valid) {
+        alert(`Invalid TON address: ${validation.error}`);
+        return;
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        cross_chain_presence: {
+          ...prev.cross_chain_presence,
+          ton_addresses: [...prev.cross_chain_presence.ton_addresses, sanitized]
         }
       }));
     }
@@ -146,8 +286,25 @@ const CompanyRegistrationForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Rate limiting check
+    if (!defaultRateLimiter.canProceed('form_submission')) {
+      const remaining = defaultRateLimiter.getRemainingAttempts('form_submission');
+      setError(`Too many submission attempts. Please wait before trying again. Remaining attempts: ${remaining}`);
+      return;
+    }
+    
+    // Comprehensive form validation
+    const validation = validateForm.companyRegistration(formData);
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
+      setError('Please fix the validation errors below.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
+    setValidationErrors({});
 
     try {
       const result = await registryApi.createCompany(formData);
@@ -199,8 +356,13 @@ const CompanyRegistrationForm: React.FC = () => {
             id="company-name"
             value={formData.basic_info.name}
             onChange={(e) => handleBasicInfoChange('name', e.target.value)}
+            minLength={INPUT_LIMITS.COMPANY_NAME.min}
+            maxLength={INPUT_LIMITS.COMPANY_NAME.max}
             required
           />
+          {validationErrors['basic_info.name'] && (
+            <div className="field-error">{validationErrors['basic_info.name']}</div>
+          )}
         </div>
 
         <div className="form-group">
@@ -209,9 +371,14 @@ const CompanyRegistrationForm: React.FC = () => {
             id="description"
             value={formData.basic_info.description}
             onChange={(e) => handleBasicInfoChange('description', e.target.value)}
+            minLength={INPUT_LIMITS.DESCRIPTION.min}
+            maxLength={INPUT_LIMITS.DESCRIPTION.max}
             rows={4}
             required
           />
+          {validationErrors['basic_info.description'] && (
+            <div className="field-error">{validationErrors['basic_info.description']}</div>
+          )}
         </div>
 
         <div className="form-group">
@@ -221,8 +388,15 @@ const CompanyRegistrationForm: React.FC = () => {
             id="website"
             value={formData.basic_info.website}
             onChange={(e) => handleBasicInfoChange('website', e.target.value)}
+            minLength={INPUT_LIMITS.WEBSITE_URL.min}
+            maxLength={INPUT_LIMITS.WEBSITE_URL.max}
+            pattern="https?://.*"
+            placeholder="https://example.com"
             required
           />
+          {validationErrors['basic_info.website'] && (
+            <div className="field-error">{validationErrors['basic_info.website']}</div>
+          )}
         </div>
 
         <div className="form-group">
@@ -241,9 +415,13 @@ const CompanyRegistrationForm: React.FC = () => {
             type="number"
             id="team-size"
             min="1"
+            max="10000"
             value={formData.basic_info.team_size}
             onChange={(e) => handleBasicInfoChange('team_size', parseInt(e.target.value))}
           />
+          {validationErrors['basic_info.team_size'] && (
+            <div className="field-error">{validationErrors['basic_info.team_size']}</div>
+          )}
         </div>
 
         <div className="form-group">
@@ -274,8 +452,12 @@ const CompanyRegistrationForm: React.FC = () => {
             id="github-org"
             value={formData.web3_identity.github_org || ''}
             onChange={(e) => handleWeb3IdentityChange('github_org', e.target.value)}
+            maxLength={INPUT_LIMITS.GITHUB_ORG.max}
             placeholder="your-org-name"
           />
+          {validationErrors['web3_identity.github_org'] && (
+            <div className="field-error">{validationErrors['web3_identity.github_org']}</div>
+          )}
         </div>
 
         <div className="form-group">
@@ -285,8 +467,13 @@ const CompanyRegistrationForm: React.FC = () => {
             id="twitter"
             value={formData.web3_identity.twitter_handle || ''}
             onChange={(e) => handleWeb3IdentityChange('twitter_handle', e.target.value)}
+            maxLength={INPUT_LIMITS.TWITTER_HANDLE.max}
+            pattern="@?[a-zA-Z0-9_]{1,15}"
             placeholder="@yourcompany"
           />
+          {validationErrors['web3_identity.twitter_handle'] && (
+            <div className="field-error">{validationErrors['web3_identity.twitter_handle']}</div>
+          )}
         </div>
 
         <div className="form-group">
@@ -296,8 +483,12 @@ const CompanyRegistrationForm: React.FC = () => {
             id="discord"
             value={formData.web3_identity.discord_server || ''}
             onChange={(e) => handleWeb3IdentityChange('discord_server', e.target.value)}
+            maxLength={INPUT_LIMITS.DISCORD_SERVER.max}
             placeholder="discord.gg/yourserver"
           />
+          {validationErrors['web3_identity.discord_server'] && (
+            <div className="field-error">{validationErrors['web3_identity.discord_server']}</div>
+          )}
         </div>
 
         <div className="form-group">
@@ -307,8 +498,12 @@ const CompanyRegistrationForm: React.FC = () => {
             id="telegram"
             value={formData.web3_identity.telegram_channel || ''}
             onChange={(e) => handleWeb3IdentityChange('telegram_channel', e.target.value)}
+            maxLength={INPUT_LIMITS.TELEGRAM_CHANNEL.max}
             placeholder="t.me/yourcompany"
           />
+          {validationErrors['web3_identity.telegram_channel'] && (
+            <div className="field-error">{validationErrors['web3_identity.telegram_channel']}</div>
+          )}
         </div>
       </section>
 
@@ -385,6 +580,78 @@ const CompanyRegistrationForm: React.FC = () => {
               </div>
             ))}
             <button type="button" onClick={addIcpCanister}>Add ICP Canister</button>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Solana Addresses</label>
+          <div className="address-list">
+            {formData.cross_chain_presence.solana_addresses.map((address, index) => (
+              <div key={index} className="address-item">
+                <span>{address}</span>
+                <button 
+                  type="button" 
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    cross_chain_presence: {
+                      ...prev.cross_chain_presence,
+                      solana_addresses: prev.cross_chain_presence.solana_addresses.filter((_, i) => i !== index)
+                    }
+                  }))}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={addSolanaAddress}>Add Solana Address</button>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Sui Addresses</label>
+          <div className="address-list">
+            {formData.cross_chain_presence.sui_addresses.map((address, index) => (
+              <div key={index} className="address-item">
+                <span>{address}</span>
+                <button 
+                  type="button" 
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    cross_chain_presence: {
+                      ...prev.cross_chain_presence,
+                      sui_addresses: prev.cross_chain_presence.sui_addresses.filter((_, i) => i !== index)
+                    }
+                  }))}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={addSuiAddress}>Add Sui Address</button>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>TON Addresses</label>
+          <div className="address-list">
+            {formData.cross_chain_presence.ton_addresses.map((address, index) => (
+              <div key={index} className="address-item">
+                <span>{address}</span>
+                <button 
+                  type="button" 
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    cross_chain_presence: {
+                      ...prev.cross_chain_presence,
+                      ton_addresses: prev.cross_chain_presence.ton_addresses.filter((_, i) => i !== index)
+                    }
+                  }))}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={addTonAddress}>Add TON Address</button>
           </div>
         </div>
       </section>

@@ -81,7 +81,8 @@ fn create_domain_verification_challenge(
 
 #[ic_cdk::update]
 async fn verify_domain_ownership(company_id: String) -> RegistryResult<VerificationResult> {
-    VerificationManager::verify_domain_ownership(company_id).await
+    let caller = ic_cdk::caller();
+    VerificationManager::verify_domain_ownership(company_id, caller).await
 }
 
 #[ic_cdk::update]
@@ -317,4 +318,20 @@ pub fn flag_testimonial(
 ) -> RegistryResult<()> {
     let caller = ic_cdk::caller();
     CommunityValidationManager::flag_testimonial(company_id, author_name, caller)
+}
+
+// Cross-chain address validation endpoints
+#[ic_cdk::query]
+pub fn validate_address(chain: String, address: String) -> RegistryResult<bool> {
+    RegistryAPI::validate_address(chain, address)
+}
+
+#[ic_cdk::query]
+pub fn get_address_validation_rules(chain: String) -> RegistryResult<String> {
+    RegistryAPI::get_address_validation_rules(chain)
+}
+
+#[ic_cdk::query]
+pub fn get_supported_chains() -> RegistryResult<Vec<String>> {
+    RegistryAPI::get_supported_chains()
 }

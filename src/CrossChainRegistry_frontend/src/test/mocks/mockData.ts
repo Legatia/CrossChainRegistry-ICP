@@ -23,6 +23,9 @@ export const mockCrossChainPresence: CrossChainPresence = {
   bitcoin_addresses: ['1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'],
   icp_canisters: ['rdmx6-jaaaa-aaaah-qcaiq-cai'],
   polygon_contracts: ['0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'],
+  solana_addresses: ['7dHbWXmci3dT8UFYWGGWnSZwJa8ACHWrAhwRgBAuR7a1'],
+  sui_addresses: ['0x2d3d1d6e5f7c8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b'],
+  ton_addresses: ['EQD2NmD_lH5f5u1Kj3KfGyTvhZSX0Eg6qp2a5IQUKXxOG21n'],
   treasury_wallets: [
     {
       chain: 'ethereum',

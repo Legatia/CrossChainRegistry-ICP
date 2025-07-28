@@ -25,6 +25,9 @@ export interface CrossChainPresence {
   bitcoin_addresses: string[];
   icp_canisters: string[];
   polygon_contracts: string[];
+  solana_addresses: string[];
+  sui_addresses: string[];
+  ton_addresses: string[];
   treasury_wallets: WalletInfo[];
   token_contracts: TokenInfo[];
 }
@@ -161,7 +164,10 @@ export enum ChainType {
   Ethereum = 'Ethereum',
   Bitcoin = 'Bitcoin',
   ICP = 'ICP',
-  Polygon = 'Polygon'
+  Polygon = 'Polygon',
+  Solana = 'Solana',
+  Sui = 'Sui',
+  TON = 'TON'
 }
 
 export interface CrossChainVerificationMethod {

@@ -3,6 +3,8 @@ use ic_cdk::api::time;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::cell::RefCell;
+use std::collections::HashMap;
+use candid::Principal;
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -29,6 +31,9 @@ thread_local! {
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2)))
         )
     );
+
+    // Rate limiting storage (in-memory, resets on canister upgrade)
+    static HTTP_RATE_LIMITS: RefCell<HashMap<Principal, Vec<u64>>> = RefCell::new(HashMap::new());
 }
 
 // Storage abstraction layer
@@ -153,6 +158,9 @@ impl StorageManager {
                         crate::types::ChainType::Bitcoin => "bitcoin",
                         crate::types::ChainType::ICP => "icp",
                         crate::types::ChainType::Polygon => "polygon",
+                        crate::types::ChainType::Solana => "solana",
+                        crate::types::ChainType::Sui => "sui",
+                        crate::types::ChainType::TON => "ton",
                     };
                     
                     if challenge.company_id == company_id 
@@ -163,6 +171,49 @@ impl StorageManager {
                         None
                     }
                 })
+        })
+    }
+
+    // Rate limiting functions
+    pub fn check_http_rate_limit(principal: Principal) -> bool {
+        const MAX_REQUESTS_PER_MINUTE: usize = 10;
+        const WINDOW_SIZE_NS: u64 = 60_000_000_000; // 1 minute in nanoseconds
+
+        HTTP_RATE_LIMITS.with(|limits| {
+            let mut limits = limits.borrow_mut();
+            let now = time();
+            let window_start = now.saturating_sub(WINDOW_SIZE_NS);
+
+            // Get or create the request history for this principal
+            let requests = limits.entry(principal).or_insert_with(Vec::new);
+
+            // Remove requests older than the time window
+            requests.retain(|&timestamp| timestamp > window_start);
+
+            // Check if under the rate limit
+            if requests.len() < MAX_REQUESTS_PER_MINUTE {
+                requests.push(now);
+                true // Allow request
+            } else {
+                false // Rate limit exceeded
+            }
+        })
+    }
+
+    // Clean up old rate limit data (called periodically)
+    pub fn cleanup_rate_limits() {
+        const CLEANUP_WINDOW_NS: u64 = 300_000_000_000; // 5 minutes in nanoseconds
+
+        HTTP_RATE_LIMITS.with(|limits| {
+            let mut limits = limits.borrow_mut();
+            let now = time();
+            let cleanup_threshold = now.saturating_sub(CLEANUP_WINDOW_NS);
+
+            // Remove entries that are completely outside the cleanup window
+            limits.retain(|_, requests| {
+                requests.retain(|&timestamp| timestamp > cleanup_threshold);
+                !requests.is_empty()
+            });
         })
     }
 }

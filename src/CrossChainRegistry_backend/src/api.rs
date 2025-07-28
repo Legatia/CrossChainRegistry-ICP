@@ -13,11 +13,112 @@ use std::collections::HashMap;
 pub struct RegistryAPI;
 
 impl RegistryAPI {
+    // Security constants for input validation
+    const MAX_NAME_LENGTH: usize = 100;
+    const MAX_DESCRIPTION_LENGTH: usize = 2000;
+    const MAX_URL_LENGTH: usize = 500;
+    const MAX_MESSAGE_LENGTH: usize = 1000;
+    const MAX_SOCIAL_HANDLE_LENGTH: usize = 100;
+    const MAX_ADDRESS_LENGTH: usize = 100;
+    const MAX_TEAM_MEMBERS: usize = 50;
+    const MAX_ADDRESSES_PER_CHAIN: usize = 20;
+
+    // Input validation functions
+    fn validate_string_length(value: &str, max_length: usize, field_name: &str) -> Result<(), String> {
+        if value.len() > max_length {
+            return Err(format!("{} exceeds maximum length of {} characters", field_name, max_length));
+        }
+        Ok(())
+    }
+
+    fn validate_company_request(request: &CreateCompanyRequest) -> Result<(), String> {
+        // Validate basic info
+        Self::validate_string_length(&request.basic_info.name, Self::MAX_NAME_LENGTH, "Company name")?;
+        Self::validate_string_length(&request.basic_info.description, Self::MAX_DESCRIPTION_LENGTH, "Description")?;
+        Self::validate_string_length(&request.basic_info.website, Self::MAX_URL_LENGTH, "Website URL")?;
+        Self::validate_string_length(&request.basic_info.founding_date, 20, "Founding date")?;
+
+        if request.basic_info.name.trim().is_empty() {
+            return Err("Company name cannot be empty".to_string());
+        }
+
+        if request.basic_info.team_size > 10000 {
+            return Err("Team size cannot exceed 10,000 members".to_string());
+        }
+
+        if request.basic_info.focus_areas.len() > 10 {
+            return Err("Cannot have more than 10 focus areas".to_string());
+        }
+
+        // Validate web3 identity
+        if let Some(github_org) = &request.web3_identity.github_org {
+            Self::validate_string_length(github_org, Self::MAX_SOCIAL_HANDLE_LENGTH, "GitHub organization")?;
+        }
+        if let Some(twitter) = &request.web3_identity.twitter_handle {
+            Self::validate_string_length(twitter, Self::MAX_SOCIAL_HANDLE_LENGTH, "Twitter handle")?;
+        }
+        if let Some(discord) = &request.web3_identity.discord_server {
+            Self::validate_string_length(discord, Self::MAX_URL_LENGTH, "Discord server")?;
+        }
+        if let Some(telegram) = &request.web3_identity.telegram_channel {
+            Self::validate_string_length(telegram, Self::MAX_URL_LENGTH, "Telegram channel")?;
+        }
+
+        // Validate cross-chain addresses
+        if request.cross_chain_presence.ethereum_contracts.len() > Self::MAX_ADDRESSES_PER_CHAIN {
+            return Err("Too many Ethereum contracts".to_string());
+        }
+        if request.cross_chain_presence.bitcoin_addresses.len() > Self::MAX_ADDRESSES_PER_CHAIN {
+            return Err("Too many Bitcoin addresses".to_string());
+        }
+        if request.cross_chain_presence.solana_addresses.len() > Self::MAX_ADDRESSES_PER_CHAIN {
+            return Err("Too many Solana addresses".to_string());
+        }
+        if request.cross_chain_presence.sui_addresses.len() > Self::MAX_ADDRESSES_PER_CHAIN {
+            return Err("Too many Sui addresses".to_string());
+        }
+        if request.cross_chain_presence.ton_addresses.len() > Self::MAX_ADDRESSES_PER_CHAIN {
+            return Err("Too many TON addresses".to_string());
+        }
+
+        for address in &request.cross_chain_presence.ethereum_contracts {
+            Self::validate_string_length(address, Self::MAX_ADDRESS_LENGTH, "Ethereum contract")?;
+        }
+        for address in &request.cross_chain_presence.bitcoin_addresses {
+            Self::validate_string_length(address, Self::MAX_ADDRESS_LENGTH, "Bitcoin address")?;
+        }
+        for address in &request.cross_chain_presence.solana_addresses {
+            Self::validate_string_length(address, Self::MAX_ADDRESS_LENGTH, "Solana address")?;
+        }
+
+        // Validate team members
+        if request.team_members.len() > Self::MAX_TEAM_MEMBERS {
+            return Err("Too many team members".to_string());
+        }
+
+        for member in &request.team_members {
+            Self::validate_string_length(&member.name, Self::MAX_NAME_LENGTH, "Team member name")?;
+            Self::validate_string_length(&member.role, Self::MAX_NAME_LENGTH, "Team member role")?;
+            if let Some(github) = &member.github_profile {
+                Self::validate_string_length(github, Self::MAX_URL_LENGTH, "GitHub profile")?;
+            }
+            if let Some(linkedin) = &member.linkedin_profile {
+                Self::validate_string_length(linkedin, Self::MAX_URL_LENGTH, "LinkedIn profile")?;
+            }
+        }
+
+        Ok(())
+    }
+
     // Core CRUD operations
     pub fn create_company(
         request: CreateCompanyRequest,
         caller_principal: Principal,
     ) -> RegistryResult<String> {
+        // Validate input first
+        if let Err(validation_error) = Self::validate_company_request(&request) {
+            return RegistryResult::Err(validation_error);
+        }
         let now = time();
         let company_id = StorageManager::generate_company_id();
 
@@ -215,5 +316,29 @@ impl RegistryAPI {
         stats.insert("flagged_companies".to_string(), flagged_count);
 
         stats
+    }
+
+    // Cross-chain address validation utilities
+    pub fn validate_address(chain: String, address: String) -> RegistryResult<bool> {
+        let is_valid = VerificationManager::validate_cross_chain_address(&chain, &address);
+        RegistryResult::Ok(is_valid)
+    }
+
+    pub fn get_address_validation_rules(chain: String) -> RegistryResult<String> {
+        let rules = VerificationManager::get_address_validation_rules(&chain);
+        RegistryResult::Ok(rules)
+    }
+
+    pub fn get_supported_chains() -> RegistryResult<Vec<String>> {
+        let chains = vec![
+            "bitcoin".to_string(),
+            "ethereum".to_string(),
+            "solana".to_string(),
+            "sui".to_string(),
+            "ton".to_string(),
+            "icp".to_string(),
+            "polygon".to_string(),
+        ];
+        RegistryResult::Ok(chains)
     }
 }

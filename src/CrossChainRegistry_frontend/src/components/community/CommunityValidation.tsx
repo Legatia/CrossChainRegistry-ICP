@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { registryApi } from '../../services/api';
 import { Company, EndorsementFormData, TestimonialFormData, VouchFormData } from '../../types';
+import { 
+  sanitizeInput, 
+  validateForm, 
+  defaultRateLimiter,
+  INPUT_LIMITS 
+} from '../../utils/validation';
 import './CommunityValidation.scss';
 
 interface CommunityValidationProps {
@@ -13,6 +19,7 @@ const CommunityValidation: React.FC<CommunityValidationProps> = ({ company, onUp
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Form states
   const [endorsementForm, setEndorsementForm] = useState<EndorsementFormData>({
@@ -38,11 +45,33 @@ const CommunityValidation: React.FC<CommunityValidationProps> = ({ company, onUp
 
   const handleAddEndorsement = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Rate limiting check
+    if (!defaultRateLimiter.canProceed('endorsement_submission')) {
+      setError('Too many submission attempts. Please wait before trying again.');
+      return;
+    }
+    
+    // Validate endorsement
+    const validation = validateForm.endorsement(endorsementForm.message);
+    if (!validation.valid) {
+      setValidationErrors({ message: validation.error! });
+      setError('Please fix the validation errors.');
+      return;
+    }
+    
+    // Sanitize input
+    const sanitizedForm = {
+      ...endorsementForm,
+      message: sanitizeInput.text(endorsementForm.message)
+    };
+    
     setLoading(true);
     setError(null);
+    setValidationErrors({});
 
     try {
-      const result = await registryApi.addEndorsement(endorsementForm);
+      const result = await registryApi.addEndorsement(sanitizedForm);
       if ('Ok' in result) {
         setEndorsementForm({ company_id: company.id, message: '' });
         setShowAddForm(false);
@@ -59,11 +88,35 @@ const CommunityValidation: React.FC<CommunityValidationProps> = ({ company, onUp
 
   const handleAddTestimonial = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Rate limiting check
+    if (!defaultRateLimiter.canProceed('testimonial_submission')) {
+      setError('Too many submission attempts. Please wait before trying again.');
+      return;
+    }
+    
+    // Validate testimonial
+    const validation = validateForm.testimonial(testimonialForm);
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
+      setError('Please fix the validation errors.');
+      return;
+    }
+    
+    // Sanitize input
+    const sanitizedForm = {
+      ...testimonialForm,
+      author_name: sanitizeInput.text(testimonialForm.author_name),
+      role: sanitizeInput.text(testimonialForm.role),
+      message: sanitizeInput.text(testimonialForm.message)
+    };
+    
     setLoading(true);
     setError(null);
+    setValidationErrors({});
 
     try {
-      const result = await registryApi.addTestimonial(testimonialForm);
+      const result = await registryApi.addTestimonial(sanitizedForm);
       if ('Ok' in result) {
         setTestimonialForm({ 
           company_id: company.id, 
@@ -85,11 +138,33 @@ const CommunityValidation: React.FC<CommunityValidationProps> = ({ company, onUp
 
   const handleAddVouch = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Rate limiting check
+    if (!defaultRateLimiter.canProceed('vouch_submission')) {
+      setError('Too many submission attempts. Please wait before trying again.');
+      return;
+    }
+    
+    // Validate vouch
+    const validation = validateForm.vouch(vouchForm.message);
+    if (!validation.valid) {
+      setValidationErrors({ message: validation.error! });
+      setError('Please fix the validation errors.');
+      return;
+    }
+    
+    // Sanitize input
+    const sanitizedForm = {
+      ...vouchForm,
+      message: sanitizeInput.text(vouchForm.message)
+    };
+    
     setLoading(true);
     setError(null);
+    setValidationErrors({});
 
     try {
-      const result = await registryApi.addVouch(vouchForm);
+      const result = await registryApi.addVouch(sanitizedForm);
       if ('Ok' in result) {
         setVouchForm({ company_id: company.id, message: '' });
         setShowAddForm(false);
@@ -122,11 +197,16 @@ const CommunityValidation: React.FC<CommunityValidationProps> = ({ company, onUp
             <label>Endorsement Message</label>
             <textarea
               value={endorsementForm.message}
-              onChange={(e) => setEndorsementForm(prev => ({ ...prev, message: e.target.value }))}
+              onChange={(e) => setEndorsementForm(prev => ({ ...prev, message: sanitizeInput.text(e.target.value) }))}
               placeholder="Write your endorsement for this company..."
+              minLength={INPUT_LIMITS.ENDORSEMENT_MESSAGE.min}
+              maxLength={INPUT_LIMITS.ENDORSEMENT_MESSAGE.max}
               required
               rows={4}
             />
+            {validationErrors.message && (
+              <div className="field-error">{validationErrors.message}</div>
+            )}
           </div>
           <div className="form-actions">
             <button type="submit" disabled={loading}>
@@ -174,30 +254,45 @@ const CommunityValidation: React.FC<CommunityValidationProps> = ({ company, onUp
               <input
                 type="text"
                 value={testimonialForm.author_name}
-                onChange={(e) => setTestimonialForm(prev => ({ ...prev, author_name: e.target.value }))}
+                onChange={(e) => setTestimonialForm(prev => ({ ...prev, author_name: sanitizeInput.text(e.target.value) }))}
+                minLength={INPUT_LIMITS.AUTHOR_NAME.min}
+                maxLength={INPUT_LIMITS.AUTHOR_NAME.max}
                 required
               />
+              {validationErrors.author_name && (
+                <div className="field-error">{validationErrors.author_name}</div>
+              )}
             </div>
             <div className="form-group">
               <label>Your Role</label>
               <input
                 type="text"
                 value={testimonialForm.role}
-                onChange={(e) => setTestimonialForm(prev => ({ ...prev, role: e.target.value }))}
+                onChange={(e) => setTestimonialForm(prev => ({ ...prev, role: sanitizeInput.text(e.target.value) }))}
                 placeholder="e.g., Former Developer, Current Marketing Lead"
+                minLength={INPUT_LIMITS.TEAM_MEMBER_ROLE.min}
+                maxLength={INPUT_LIMITS.TEAM_MEMBER_ROLE.max}
                 required
               />
+              {validationErrors.role && (
+                <div className="field-error">{validationErrors.role}</div>
+              )}
             </div>
           </div>
           <div className="form-group">
             <label>Testimonial</label>
             <textarea
               value={testimonialForm.message}
-              onChange={(e) => setTestimonialForm(prev => ({ ...prev, message: e.target.value }))}
+              onChange={(e) => setTestimonialForm(prev => ({ ...prev, message: sanitizeInput.text(e.target.value) }))}
               placeholder="Share your experience working with this company..."
+              minLength={INPUT_LIMITS.TESTIMONIAL_MESSAGE.min}
+              maxLength={INPUT_LIMITS.TESTIMONIAL_MESSAGE.max}
               required
               rows={4}
             />
+            {validationErrors.message && (
+              <div className="field-error">{validationErrors.message}</div>
+            )}
           </div>
           <div className="form-actions">
             <button type="submit" disabled={loading}>
@@ -248,11 +343,16 @@ const CommunityValidation: React.FC<CommunityValidationProps> = ({ company, onUp
             <label>Vouch Message</label>
             <textarea
               value={vouchForm.message}
-              onChange={(e) => setVouchForm(prev => ({ ...prev, message: e.target.value }))}
+              onChange={(e) => setVouchForm(prev => ({ ...prev, message: sanitizeInput.text(e.target.value) }))}
               placeholder="Vouch for this company based on your interactions or knowledge..."
+              minLength={INPUT_LIMITS.VOUCH_MESSAGE.min}
+              maxLength={INPUT_LIMITS.VOUCH_MESSAGE.max}
               required
               rows={4}
             />
+            {validationErrors.message && (
+              <div className="field-error">{validationErrors.message}</div>
+            )}
           </div>
           <div className="form-actions">
             <button type="submit" disabled={loading}>
