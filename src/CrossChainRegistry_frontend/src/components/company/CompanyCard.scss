@@ -147,6 +147,83 @@
     gap: 6px;
   }
 
+  &__verification-proofs {
+    margin-bottom: 16px;
+
+    .label {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .verification-proof-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+
+      .proof-badge {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #f3f4f6;
+        color: #374151;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+        border: 1px solid #e5e7eb;
+        position: relative;
+
+        &.status-active {
+          background: #ecfdf5;
+          color: #065f46;
+          border-color: #a7f3d0;
+        }
+
+        &.status-removed {
+          background: #fef2f2;
+          color: #991b1b;
+          border-color: #fecaca;
+
+          .warning-indicator {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            font-size: 8px;
+          }
+        }
+
+        &.status-disputed {
+          background: #fffbeb;
+          color: #92400e;
+          border-color: #fed7aa;
+
+          .warning-indicator {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            font-size: 8px;
+          }
+        }
+
+        &--more {
+          background: #e5e7eb;
+          color: #6b7280;
+        }
+
+        .proof-icon {
+          font-size: 12px;
+        }
+
+        .proof-platform {
+          font-size: 10px;
+          text-transform: uppercase;
+        }
+      }
+    }
+  }
+
   &__community {
     margin-bottom: 16px;
   }

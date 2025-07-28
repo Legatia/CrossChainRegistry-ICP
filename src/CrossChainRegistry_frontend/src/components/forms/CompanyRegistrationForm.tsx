@@ -26,7 +26,8 @@ const CompanyRegistrationForm: React.FC = () => {
       discord_server: '',
       telegram_channel: '',
       domain_verified: false,
-      social_verification_status: VerificationStatus.Pending
+      social_verification_status: VerificationStatus.Pending,
+      verification_proofs: []
     },
     cross_chain_presence: {
       ethereum_contracts: [],

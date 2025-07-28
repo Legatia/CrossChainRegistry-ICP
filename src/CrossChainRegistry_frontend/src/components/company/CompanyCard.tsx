@@ -79,6 +79,41 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
           </div>
         </div>
 
+        {/* Verification Proofs Preview */}
+        {company.web3_identity.verification_proofs && company.web3_identity.verification_proofs.length > 0 && (
+          <div className="company-card__verification-proofs">
+            <span className="label">🔗 Verified On:</span>
+            <div className="verification-proof-badges">
+              {company.web3_identity.verification_proofs.slice(0, 4).map((proof, index) => {
+                const getPlatformIcon = (platform: string) => {
+                  switch (platform) {
+                    case 'Twitter': return '🐦';
+                    case 'Discord': return '💬';
+                    case 'Telegram': return '📱';
+                    case 'GitHub': return '🐙';
+                    case 'Domain': return '🌐';
+                    default: return '🔗';
+                  }
+                };
+
+                return (
+                  <div key={index} className={`proof-badge status-${proof.status.toLowerCase()}`}>
+                    <span className="proof-icon">{getPlatformIcon(proof.verification_type)}</span>
+                    <span className="proof-platform">{proof.verification_type}</span>
+                    {proof.status === 'Removed' && <span className="warning-indicator">❌</span>}
+                    {proof.status === 'Disputed' && <span className="warning-indicator">⚠️</span>}
+                  </div>
+                );
+              })}
+              {company.web3_identity.verification_proofs.length > 4 && (
+                <div className="proof-badge proof-badge--more">
+                  +{company.web3_identity.verification_proofs.length - 4} more
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {company.basic_info.focus_areas.length > 0 && (
           <div className="company-card__focus-areas">
             <span className="label">Focus Areas:</span>

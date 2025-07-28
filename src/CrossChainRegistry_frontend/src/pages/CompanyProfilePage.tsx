@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { registryApi } from '../services/api';
 import { Company, CompanyStatus } from '../types';
 import CommunityValidation from '../components/community/CommunityValidation';
+import VerificationProofDisplay from '../components/verification/VerificationProofDisplay';
 import './CompanyProfilePage.scss';
 
 const CompanyProfilePage: React.FC = () => {
@@ -336,6 +337,13 @@ const CompanyProfilePage: React.FC = () => {
             </div>
           </section>
         )}
+
+        {/* Verification Proofs */}
+        <VerificationProofDisplay 
+          proofs={company.web3_identity.verification_proofs || []}
+          companyId={company.id}
+          companyName={company.basic_info.name}
+        />
 
         {/* Community Validation */}
         <CommunityValidation company={company} onUpdate={() => loadCompany(company.id)} />
