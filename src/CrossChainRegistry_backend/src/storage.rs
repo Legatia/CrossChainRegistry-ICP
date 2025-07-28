@@ -174,15 +174,30 @@ impl StorageManager {
         })
     }
 
-    // Rate limiting functions
+    // Enhanced rate limiting functions with security improvements
     pub fn check_http_rate_limit(principal: Principal) -> bool {
-        const MAX_REQUESTS_PER_MINUTE: usize = 10;
-        const WINDOW_SIZE_NS: u64 = 60_000_000_000; // 1 minute in nanoseconds
+        Self::check_rate_limit_with_config(principal, 10, 60_000_000_000)
+    }
 
+    pub fn check_verification_rate_limit(principal: Principal) -> bool {
+        // Stricter limit for verification attempts
+        Self::check_rate_limit_with_config(principal, 5, 300_000_000_000) // 5 per 5 minutes
+    }
+
+    pub fn check_report_rate_limit(principal: Principal) -> bool {
+        // Even stricter limit for reporting
+        Self::check_rate_limit_with_config(principal, 3, 600_000_000_000) // 3 per 10 minutes
+    }
+
+    fn check_rate_limit_with_config(
+        principal: Principal, 
+        max_requests: usize, 
+        window_size_ns: u64
+    ) -> bool {
         HTTP_RATE_LIMITS.with(|limits| {
             let mut limits = limits.borrow_mut();
             let now = time();
-            let window_start = now.saturating_sub(WINDOW_SIZE_NS);
+            let window_start = now.saturating_sub(window_size_ns);
 
             // Get or create the request history for this principal
             let requests = limits.entry(principal).or_insert_with(Vec::new);
@@ -190,12 +205,32 @@ impl StorageManager {
             // Remove requests older than the time window
             requests.retain(|&timestamp| timestamp > window_start);
 
+            // Security: Prevent memory exhaustion by limiting history size
+            if requests.len() > 1000 {
+                requests.drain(..requests.len() - 100); // Keep only recent 100 requests
+            }
+
             // Check if under the rate limit
-            if requests.len() < MAX_REQUESTS_PER_MINUTE {
+            if requests.len() < max_requests {
                 requests.push(now);
                 true // Allow request
             } else {
                 false // Rate limit exceeded
+            }
+        })
+    }
+
+    pub fn get_rate_limit_info(principal: Principal) -> (usize, u64) {
+        HTTP_RATE_LIMITS.with(|limits| {
+            let limits = limits.borrow();
+            if let Some(requests) = limits.get(&principal) {
+                let now = time();
+                let window_start = now.saturating_sub(60_000_000_000); // 1 minute window
+                let recent_requests = requests.iter().filter(|&&timestamp| timestamp > window_start).count();
+                let oldest_request = requests.first().copied().unwrap_or(now);
+                (recent_requests, now - oldest_request)
+            } else {
+                (0, 0)
             }
         })
     }

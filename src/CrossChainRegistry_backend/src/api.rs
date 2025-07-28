@@ -123,10 +123,13 @@ impl RegistryAPI {
         let company_id = StorageManager::generate_company_id();
 
         // Initialize company with default values
+        let mut web3_identity = request.web3_identity;
+        web3_identity.verification_proofs = Vec::new(); // Initialize empty verification proofs
+
         let company = Company {
             id: company_id.clone(),
             basic_info: request.basic_info,
-            web3_identity: request.web3_identity,
+            web3_identity,
             cross_chain_presence: request.cross_chain_presence,
             team_members: request.team_members,
             community_validation: CommunityValidation {

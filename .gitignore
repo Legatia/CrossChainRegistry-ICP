@@ -78,3 +78,20 @@ ehthumbs.db
 
 # Claude Code
 .claude/
+
+# Cargo.lock should be committed for applications but ignored for libraries
+# Since this is an ICP canister application, we'll commit Cargo.lock
+# Cargo.lock
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Security and sensitive files
+*.key
+*.pem
+*.p12
+.secrets/

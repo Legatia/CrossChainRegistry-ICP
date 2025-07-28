@@ -13,8 +13,8 @@ use storage::StorageManager;
 use types::{
     ChainType, Company, CommunityValidation, CommunityValidationStats, CreateCompanyRequest, 
     CrossChainChallenge, CrossChainVerificationRequest, DomainVerificationChallenge, Endorsement, 
-    RegistryResult, ReputationLeaderboard, SearchFilters, Testimonial, UpdateCompanyRequest, 
-    VerificationResult, VerificationType, Vouch,
+    ProofCheckResult, ProofStatus, RegistryResult, ReportType, ReputationLeaderboard, SearchFilters, 
+    Testimonial, UpdateCompanyRequest, VerificationResult, VerificationType, Vouch,
 };
 use verification::VerificationManager;
 use std::collections::HashMap;
@@ -95,6 +95,36 @@ fn verify_social_media_manual(
     VerificationManager::verify_social_media_manual(company_id, platform, proof_url, caller)
 }
 
+#[ic_cdk::update]
+fn verify_social_media_with_proof(
+    company_id: String,
+    platform: String,
+    proof_url: String,
+) -> RegistryResult<VerificationResult> {
+    let caller = ic_cdk::caller();
+    VerificationManager::verify_social_media_with_proof(company_id, platform, proof_url, caller)
+}
+
+#[ic_cdk::update]
+async fn verify_proof_still_exists(
+    company_id: String,
+    proof_url: String,
+) -> RegistryResult<types::ProofCheckResult> {
+    let caller = ic_cdk::caller();
+    VerificationManager::verify_proof_still_exists(company_id, proof_url, caller).await
+}
+
+#[ic_cdk::update]
+fn report_verification_issue(
+    company_id: String,
+    proof_url: String,
+    report_type: types::ReportType,
+    evidence: String,
+) -> RegistryResult<String> {
+    let caller = ic_cdk::caller();
+    VerificationManager::report_verification_issue(company_id, proof_url, report_type, evidence, caller)
+}
+
 // Verification utility endpoints
 #[ic_cdk::query]
 fn get_domain_verification_challenge(company_id: String) -> Option<DomainVerificationChallenge> {
@@ -158,6 +188,11 @@ fn transform_github_response(raw: TransformArgs) -> ic_cdk::api::management_cani
 #[ic_cdk::query]
 fn transform_domain_response(raw: TransformArgs) -> ic_cdk::api::management_canister::http_request::HttpResponse {
     verification::transform_domain_response(raw)
+}
+
+#[ic_cdk::query]
+fn transform_proof_check(raw: TransformArgs) -> ic_cdk::api::management_canister::http_request::HttpResponse {
+    verification::transform_proof_check(raw)
 }
 
 #[ic_cdk::query]

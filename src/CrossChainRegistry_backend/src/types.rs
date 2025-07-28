@@ -24,6 +24,7 @@ pub struct Web3Identity {
     pub telegram_channel: Option<String>,
     pub domain_verified: bool,
     pub social_verification_status: VerificationStatus,
+    pub verification_proofs: Vec<VerificationProof>,
 }
 
 #[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
@@ -223,13 +224,70 @@ pub struct VerificationRequest {
     pub proof_data: String, // Challenge response or proof
 }
 
-#[derive(CandidType, Deserialize, Clone, Debug)]
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
 pub enum VerificationType {
     GitHub,
     Domain,
     Twitter,
     Discord,
     Telegram,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct VerificationProof {
+    pub verification_type: VerificationType,
+    pub proof_url: String,
+    pub verified_at: u64,
+    pub verification_method: VerificationMethod,
+    pub challenge_data: Option<String>, // For domain/GitHub challenges
+    pub status: ProofStatus,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum VerificationMethod {
+    Automated,     // GitHub API, DNS verification
+    CommunityVote, // Community consensus
+    ProofVisible,  // Permanent public post
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub enum ProofStatus {
+    Active,      // Proof is still visible
+    Removed,     // Post was deleted (red flag!)
+    Disputed,    // Community flagged as suspicious
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct ProofMonitoring {
+    pub proof_id: String,
+    pub company_id: String,
+    pub last_checked: u64,
+    pub check_results: Vec<ProofCheckResult>,
+    pub community_reports: Vec<CommunityReport>,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct ProofCheckResult {
+    pub checker_principal: Principal,
+    pub timestamp: u64,
+    pub status_found: ProofStatus,
+    pub notes: String,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct CommunityReport {
+    pub reporter_principal: Principal,
+    pub report_type: ReportType,
+    pub evidence: String,
+    pub timestamp: u64,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum ReportType {
+    PostDeleted,
+    ContentModified,
+    Suspicious,
+    FakeProfile,
 }
 
 #[derive(CandidType, Deserialize, Clone, Debug)]

@@ -11,6 +11,15 @@ export interface CompanyBasicInfo {
   focus_areas: string[];
 }
 
+export interface VerificationProof {
+  verification_type: 'GitHub' | 'Domain' | 'Twitter' | 'Discord' | 'Telegram';
+  proof_url: string;
+  verified_at: bigint;
+  verification_method: 'Automated' | 'CommunityVote' | 'ProofVisible';
+  challenge_data?: string;
+  status: 'Active' | 'Removed' | 'Disputed';
+}
+
 export interface Web3Identity {
   github_org?: string;
   twitter_handle?: string;
@@ -18,6 +27,7 @@ export interface Web3Identity {
   telegram_channel?: string;
   domain_verified: boolean;
   social_verification_status: VerificationStatus;
+  verification_proofs: VerificationProof[];
 }
 
 export interface CrossChainPresence {
