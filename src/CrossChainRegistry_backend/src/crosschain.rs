@@ -1,7 +1,10 @@
 use crate::storage::StorageManager;
+use crate::monitoring::MonitoringSystem;
 use crate::types::{
     ChainType, CrossChainChallenge, CrossChainVerificationMethod, CrossChainVerificationRequest,
     EtherscanContractResponse, RegistryResult, VerificationResult, BlockchainInfoResponse,
+    SecurityEventType, SecuritySeverity, VerificationProof, VerificationType, 
+    VerificationMethod, ProofStatus,
 };
 use candid::Principal;
 use ic_cdk::api::management_canister::http_request::{
@@ -22,13 +25,54 @@ impl CrossChainVerifier {
         request: CrossChainVerificationRequest,
         caller_principal: Principal,
     ) -> RegistryResult<CrossChainChallenge> {
+        // Check rate limiting for cross-chain verification
+        if !StorageManager::check_verification_rate_limit(caller_principal) {
+            let (current_requests, _) = StorageManager::get_rate_limit_info(caller_principal);
+            // Log rate limit violation
+            MonitoringSystem::log_security_event(
+                SecurityEventType::RateLimitExceeded,
+                Some(caller_principal),
+                SecuritySeverity::Medium,
+                format!(
+                    "Rate limit exceeded for cross-chain challenge creation: {} attempts",
+                    current_requests
+                ),
+                None,
+                None,
+            );
+            return RegistryResult::Err("Rate limit exceeded. Please wait before creating more cross-chain challenges.".to_string());
+        }
+
         // Get company and verify permissions
         let company = match StorageManager::get_company(&request.company_id) {
             Some(company) => company,
-            None => return RegistryResult::Err("Company not found".to_string()),
+            None => {
+                // Log suspicious activity
+                MonitoringSystem::log_security_event(
+                    SecurityEventType::SuspiciousInput,
+                    Some(caller_principal),
+                    SecuritySeverity::Low,
+                    format!("Cross-chain challenge attempted for non-existent company: {}", request.company_id),
+                    None,
+                    None,
+                );
+                return RegistryResult::Err("Company not found".to_string());
+            }
         };
 
         if company.created_by != caller_principal {
+            // Log unauthorized access attempt
+            MonitoringSystem::log_security_event(
+                SecurityEventType::UnauthorizedAccess,
+                Some(caller_principal),
+                SecuritySeverity::Medium,
+                format!(
+                    "Unauthorized cross-chain challenge attempt: principal {} tried to create challenge for company {}",
+                    caller_principal, request.company_id
+                ),
+                None,
+                None,
+            );
             return RegistryResult::Err(
                 "Unauthorized: Only company creator can create challenges".to_string(),
             );
@@ -72,7 +116,20 @@ impl CrossChainVerifier {
             &request.address_or_contract,
         );
 
-        StorageManager::insert_crosschain_challenge(challenge_key, challenge.clone());
+        StorageManager::insert_crosschain_challenge(challenge_key.clone(), challenge.clone());
+
+        // Log successful challenge creation
+        MonitoringSystem::log_security_event(
+            SecurityEventType::SecurityScan,
+            Some(caller_principal),
+            SecuritySeverity::Low,
+            format!(
+                "Cross-chain challenge created: {} for company {} on chain {:?}",
+                request.address_or_contract, request.company_id, request.chain_type
+            ),
+            None,
+            None,
+        );
 
         RegistryResult::Ok(challenge)
     }
@@ -129,6 +186,16 @@ impl CrossChainVerifier {
                         Ok(etherscan_data) => {
                             // Look for the challenge message in recent transactions
                             if Self::verify_ethereum_challenge(&etherscan_data, &challenge.challenge_message) {
+                                // Create permanent verification proof
+                                let proof = VerificationProof {
+                                    verification_type: VerificationType::GitHub, // Using GitHub as placeholder for cross-chain
+                                    proof_url: format!("https://etherscan.io/address/{}", contract_address),
+                                    verified_at: time(),
+                                    verification_method: VerificationMethod::Automated,
+                                    challenge_data: Some(challenge.challenge_message.clone()),
+                                    status: ProofStatus::Active,
+                                };
+
                                 // Verification successful - update company
                                 let success = StorageManager::update_company(&company_id, |company| {
                                     // Add to verified contracts if not already present
@@ -146,35 +213,114 @@ impl CrossChainVerifier {
                                             token.verified = true;
                                         }
                                     }
+                                    // Add verification proof
+                                    company.web3_identity.verification_proofs.push(proof.clone());
                                 });
 
                                 if success {
                                     // Remove challenge after successful verification
                                     StorageManager::remove_crosschain_challenge(&challenge_key);
 
+                                    // Log successful verification
+                                    MonitoringSystem::log_security_event(
+                                        SecurityEventType::SecurityScan,
+                                        None,
+                                        SecuritySeverity::Low,
+                                        format!(
+                                            "Ethereum contract verified: {} for company {}",
+                                            contract_address, company_id
+                                        ),
+                                        None,
+                                        None,
+                                    );
+
+                                    // Schedule monitoring for this contract
+                                    let proof_id = format!("ethereum_{}_{}", contract_address, proof.verified_at);
+                                    MonitoringSystem::schedule_proof_monitoring(
+                                        company_id.clone(),
+                                        proof_id,
+                                        crate::types::TaskPriority::Medium,
+                                    );
+
                                     RegistryResult::Ok(VerificationResult {
                                         success: true,
-                                        message: format!("Ethereum contract {} verified successfully", contract_address),
+                                        message: format!(
+                                            "Ethereum contract {} verified successfully. Contract will be monitored for continued activity.",
+                                            contract_address
+                                        ),
                                         verified_at: Some(time()),
                                     })
                                 } else {
+                                    // Log failure
+                                    MonitoringSystem::log_security_event(
+                                        SecurityEventType::SuspiciousInput,
+                                        None,
+                                        SecuritySeverity::Medium,
+                                        format!("Failed to update company during Ethereum verification: {}", company_id),
+                                        None,
+                                        None,
+                                    );
                                     RegistryResult::Err("Failed to update company".to_string())
                                 }
                             } else {
+                                // Log failed verification attempt
+                                MonitoringSystem::log_security_event(
+                                    SecurityEventType::RepeatedFailedVerification,
+                                    None,
+                                    SecuritySeverity::Low,
+                                    format!(
+                                        "Ethereum verification failed - challenge not found: {} for company {}",
+                                        contract_address, company_id
+                                    ),
+                                    None,
+                                    None,
+                                );
+
                                 RegistryResult::Ok(VerificationResult {
                                     success: false,
-                                    message: "Challenge message not found in recent transactions".to_string(),
+                                    message: "Challenge message not found in recent transactions. Please ensure you've sent a transaction with the challenge message from the verified address.".to_string(),
                                     verified_at: None,
                                 })
                             }
                         }
-                        Err(_) => RegistryResult::Err("Failed to parse Etherscan API response".to_string()),
+                        Err(_) => {
+                            // Log parsing failure
+                            MonitoringSystem::log_security_event(
+                                SecurityEventType::SuspiciousInput,
+                                None,
+                                SecuritySeverity::Medium,
+                                format!("Failed to parse Etherscan API response for contract {}", contract_address),
+                                None,
+                                None,
+                            );
+                            RegistryResult::Err("Failed to parse Etherscan API response".to_string())
+                        }
                     }
                 } else {
+                    // Log API error
+                    MonitoringSystem::log_security_event(
+                        SecurityEventType::SuspiciousInput,
+                        None,
+                        SecuritySeverity::Medium,
+                        format!("Etherscan API error {} for contract {}", response.status, contract_address),
+                        None,
+                        None,
+                    );
                     RegistryResult::Err(format!("Etherscan API error: {}", response.status))
                 }
             }
-            Err(err) => RegistryResult::Err(format!("HTTP request failed: {:?}", err)),
+            Err(err) => {
+                // Log HTTP failure
+                MonitoringSystem::log_security_event(
+                    SecurityEventType::SuspiciousInput,
+                    None,
+                    SecuritySeverity::Medium,
+                    format!("HTTP request failed for Ethereum verification: {:?}", err),
+                    None,
+                    None,
+                );
+                RegistryResult::Err(format!("HTTP request failed: {:?}", err))
+            }
         }
     }
 
@@ -457,6 +603,255 @@ impl CrossChainVerifier {
                 4. The system will verify address activity and ownership".to_string()
             }
         }
+    }
+
+    // Advanced cross-chain verification features
+
+    // Validate multi-chain address ownership for a company
+    pub async fn verify_multi_chain_portfolio(
+        company_id: String,
+        caller_principal: Principal,
+    ) -> RegistryResult<Vec<String>> {
+        // Check authorization
+        let company = match StorageManager::get_company(&company_id) {
+            Some(company) => company,
+            None => {
+                MonitoringSystem::log_security_event(
+                    SecurityEventType::SuspiciousInput,
+                    Some(caller_principal),
+                    SecuritySeverity::Low,
+                    format!("Multi-chain verification attempted for non-existent company: {}", company_id),
+                    None,
+                    None,
+                );
+                return RegistryResult::Err("Company not found".to_string());
+            }
+        };
+
+        if company.created_by != caller_principal {
+            MonitoringSystem::log_security_event(
+                SecurityEventType::UnauthorizedAccess,
+                Some(caller_principal),
+                SecuritySeverity::Medium,
+                format!(
+                    "Unauthorized multi-chain verification attempt for company {}",
+                    company_id
+                ),
+                None,
+                None,
+            );
+            return RegistryResult::Err("Unauthorized access".to_string());
+        }
+
+        let mut verification_results = Vec::new();
+        let presence = &company.cross_chain_presence;
+
+        // Verify Ethereum contracts
+        for contract in &presence.ethereum_contracts {
+            match Self::verify_ethereum_contract(company_id.clone(), contract.clone()).await {
+                RegistryResult::Ok(result) => {
+                    if result.success {
+                        verification_results.push(format!("Ethereum: {} ✓", contract));
+                    } else {
+                        verification_results.push(format!("Ethereum: {} ✗ - {}", contract, result.message));
+                    }
+                }
+                RegistryResult::Err(e) => {
+                    verification_results.push(format!("Ethereum: {} ✗ - {}", contract, e));
+                }
+            }
+        }
+
+        // Verify Bitcoin addresses
+        for address in &presence.bitcoin_addresses {
+            match Self::verify_bitcoin_address(company_id.clone(), address.clone()).await {
+                RegistryResult::Ok(result) => {
+                    if result.success {
+                        verification_results.push(format!("Bitcoin: {} ✓", address));
+                    } else {
+                        verification_results.push(format!("Bitcoin: {} ✗ - {}", address, result.message));
+                    }
+                }
+                RegistryResult::Err(e) => {
+                    verification_results.push(format!("Bitcoin: {} ✗ - {}", address, e));
+                }
+            }
+        }
+
+        // Verify ICP canisters
+        for canister in &presence.icp_canisters {
+            match Self::verify_icp_canister(company_id.clone(), canister.clone()).await {
+                RegistryResult::Ok(result) => {
+                    if result.success {
+                        verification_results.push(format!("ICP: {} ✓", canister));
+                    } else {
+                        verification_results.push(format!("ICP: {} ✗ - {}", canister, result.message));
+                    }
+                }
+                RegistryResult::Err(e) => {
+                    verification_results.push(format!("ICP: {} ✗ - {}", canister, e));
+                }
+            }
+        }
+
+        // Log multi-chain verification completion
+        MonitoringSystem::log_security_event(
+            SecurityEventType::SecurityScan,
+            Some(caller_principal),
+            SecuritySeverity::Low,
+            format!(
+                "Multi-chain portfolio verification completed for company {}: {} addresses checked",
+                company_id, verification_results.len()
+            ),
+            None,
+            None,
+        );
+
+        RegistryResult::Ok(verification_results)
+    }
+
+    // Cross-chain risk assessment
+    pub fn assess_cross_chain_risk(company_id: String) -> RegistryResult<String> {
+        let company = match StorageManager::get_company(&company_id) {
+            Some(company) => company,
+            None => return RegistryResult::Err("Company not found".to_string()),
+        };
+
+        let presence = &company.cross_chain_presence;
+        let mut risk_score = 0;
+        let mut risk_factors = Vec::new();
+
+        // Check for diversification across multiple chains
+        let mut active_chains = 0;
+        if !presence.ethereum_contracts.is_empty() { active_chains += 1; }
+        if !presence.bitcoin_addresses.is_empty() { active_chains += 1; }
+        if !presence.icp_canisters.is_empty() { active_chains += 1; }
+        if !presence.solana_addresses.is_empty() { active_chains += 1; }
+        if !presence.sui_addresses.is_empty() { active_chains += 1; }
+        if !presence.ton_addresses.is_empty() { active_chains += 1; }
+
+        if active_chains < 2 {
+            risk_score += 20;
+            risk_factors.push("Low chain diversification".to_string());
+        }
+
+        // Check for unverified addresses
+        let total_addresses = presence.ethereum_contracts.len() +
+                            presence.bitcoin_addresses.len() +
+                            presence.icp_canisters.len() +
+                            presence.solana_addresses.len() +
+                            presence.sui_addresses.len() +
+                            presence.ton_addresses.len();
+
+        let verified_wallets = presence.treasury_wallets.iter()
+            .filter(|w| w.verified)
+            .count();
+
+        if total_addresses > 0 && verified_wallets < total_addresses / 2 {
+            risk_score += 30;
+            risk_factors.push("Many unverified addresses".to_string());
+        }
+
+        // Check for suspicious patterns (too many addresses)
+        if total_addresses > 50 {
+            risk_score += 25;
+            risk_factors.push("Unusually high number of addresses".to_string());
+        }
+
+        // Check treasury wallet count (simplified risk assessment)
+        let treasury_wallet_count = presence.treasury_wallets.len();
+
+        if treasury_wallet_count > 20 {
+            risk_score += 15;
+            risk_factors.push("High number of treasury wallets".to_string());
+        }
+
+        let risk_level = match risk_score {
+            0..=20 => "Low",
+            21..=50 => "Medium",
+            51..=80 => "High",
+            _ => "Critical",
+        };
+
+        let assessment = if risk_factors.is_empty() {
+            format!("Risk Level: {} (Score: {}) - No significant risk factors detected.", risk_level, risk_score)
+        } else {
+            format!("Risk Level: {} (Score: {}) - Risk factors: {}", risk_level, risk_score, risk_factors.join(", "))
+        };
+
+        // Log risk assessment
+        MonitoringSystem::log_security_event(
+            SecurityEventType::SecurityScan,
+            None,
+            match risk_level {
+                "Low" => SecuritySeverity::Low,
+                "Medium" => SecuritySeverity::Medium,
+                "High" | "Critical" => SecuritySeverity::High,
+                _ => SecuritySeverity::Low,
+            },
+            format!("Cross-chain risk assessment for company {}: {}", company_id, assessment),
+            None,
+            None,
+        );
+
+        RegistryResult::Ok(assessment)
+    }
+
+    // Enhanced address validation with security checks
+    pub fn validate_address_with_security_check(
+        chain_type: &ChainType,
+        address: &str,
+        caller_principal: Principal,
+    ) -> RegistryResult<bool> {
+        // Basic format validation
+        if let Err(err) = Self::validate_address_format(chain_type, address) {
+            // Log invalid address attempt
+            MonitoringSystem::log_security_event(
+                SecurityEventType::SuspiciousInput,
+                Some(caller_principal),
+                SecuritySeverity::Low,
+                format!("Invalid address format attempted: {} for chain {:?}", address, chain_type),
+                None,
+                None,
+            );
+            return RegistryResult::Err(err);
+        }
+
+        // Additional security checks
+        
+        // Check for known malicious addresses (simplified - in production would use real blacklists)
+        let suspicious_patterns = [
+            "0x0000000000000000000000000000000000000000", // Ethereum burn address
+            "1111111111111111111114oLvT2", // Bitcoin burn address
+            "aaaaa-aa", // ICP test addresses
+        ];
+
+        if suspicious_patterns.iter().any(|&pattern| address.contains(pattern)) {
+            MonitoringSystem::log_security_event(
+                SecurityEventType::SuspiciousInput,
+                Some(caller_principal),
+                SecuritySeverity::High,
+                format!("Suspicious address pattern detected: {} for chain {:?}", address, chain_type),
+                None,
+                None,
+            );
+            return RegistryResult::Err("Suspicious address pattern detected".to_string());
+        }
+
+        // Check address length for potential overflow attacks
+        if address.len() > 200 {
+            MonitoringSystem::log_security_event(
+                SecurityEventType::SuspiciousInput,
+                Some(caller_principal),
+                SecuritySeverity::Medium,
+                format!("Excessively long address attempted: {} chars for chain {:?}", address.len(), chain_type),
+                None,
+                None,
+            );
+            return RegistryResult::Err("Address exceeds maximum length".to_string());
+        }
+
+        RegistryResult::Ok(true)
     }
 }
 

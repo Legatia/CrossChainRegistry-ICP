@@ -1,61 +1,66 @@
-# `CrossChainRegistry`
+# CrossChain Registry
 
-Welcome to your new `CrossChainRegistry` project and to the Internet Computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+A decentralized trust platform for Web3 companies on the Internet Computer Protocol (ICP).
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+## What We're Building
 
-To learn more before you start working with `CrossChainRegistry`, see the following documentation available online:
+**CrossChain Registry** is a comprehensive trust verification system that enables Web3 companies to build credible, transparent profiles across multiple blockchain ecosystems. Think of it as a "Web3 Better Business Bureau" with built-in security monitoring.
 
-- [Quick Start](https://internetcomputer.org/docs/current/developer-docs/setup/deploy-locally)
-- [SDK Developer Tools](https://internetcomputer.org/docs/current/developer-docs/setup/install)
-- [Rust Canister Development Guide](https://internetcomputer.org/docs/current/developer-docs/backend/rust/)
-- [ic-cdk](https://docs.rs/ic-cdk)
-- [ic-cdk-macros](https://docs.rs/ic-cdk-macros)
-- [Candid Introduction](https://internetcomputer.org/docs/current/developer-docs/backend/candid/)
+### 🔍 **Core Features**
+- **Company Verification**: Multi-platform identity verification (Twitter, Discord, GitHub, etc.)
+- **Cross-Chain Presence**: Track and verify blockchain addresses and smart contracts
+- **Community Validation**: Peer endorsements, testimonials, and reputation scoring
+- **Security Monitoring**: Real-time threat detection and proof integrity monitoring
+- **Trust Transparency**: Permanent audit trails with community oversight
 
-If you want to start working on your project right away, you might want to try the following commands:
+### 🛡️ **Security & Monitoring System**
+- **Automated Monitoring**: Continuous verification that social media proofs remain active
+- **Community Reporting**: Decentralized flagging of suspicious behavior
+- **Security Event Logging**: Comprehensive logging of all security-related activities
+- **Rate Limiting**: Multi-tier protection against abuse and spam
+- **Trust Scoring**: Dynamic reputation system based on verification integrity
+
+Companies that delete their verification posts after approval are automatically flagged, creating accountability and preventing gaming of the system.
+
+## 🚀 **Quick Start**
 
 ```bash
-cd CrossChainRegistry/
-dfx help
-dfx canister --help
-```
-
-## Running the project locally
-
-If you want to test your project locally, you can use the following commands:
-
-```bash
-# Starts the replica, running in the background
+# Start local IC replica
 dfx start --background
 
-# Deploys your canisters to the replica and generates your candid interface
+# Deploy the registry
 dfx deploy
+
+# Run tests
+./test.sh quick
 ```
 
-Once the job completes, your application will be available at `http://localhost:4943?canisterId={asset_canister_id}`.
+## 📁 **Project Structure**
 
-If you have made changes to your backend canister, you can generate a new candid interface with
-
-```bash
-npm run generate
+```
+CrossChainRegistry/
+├── src/CrossChainRegistry_backend/     # Rust canister (main logic)
+│   ├── src/
+│   │   ├── monitoring.rs              # Security & monitoring system
+│   │   ├── verification.rs            # Identity verification logic
+│   │   ├── community.rs               # Community validation features
+│   │   └── types.rs                   # Data structures
+├── src/CrossChainRegistry_frontend/    # React frontend
+├── test/                              # Comprehensive test suite
+├── docs/                              # Project documentation
+│   ├── MONITORING_SYSTEM.md           # Security system documentation
+│   ├── MONITORING_TEST_RESULTS.md     # Test verification results
+│   └── README.md                      # Documentation index
+├── README.md                          # This file
+└── TESTING.md                         # Testing documentation
 ```
 
-at any time. This is recommended before starting the frontend development server, and will be run automatically any time you run `dfx deploy`.
+## 🔗 **Key Resources**
 
-If you are making frontend changes, you can start a development server with
+- **📖 Documentation**: See [`/docs`](./docs/) directory for comprehensive project documentation
+- **🖥️ Frontend**: Access deployed app via DFX-provided URL
+- **⚙️ Backend API**: Test via Candid UI or `dfx canister call`
+- **🛡️ Monitoring**: Real-time security event logging and community reporting
+- **🧪 Testing**: Run `./test.sh` for comprehensive validation
 
-```bash
-npm start
-```
-
-Which will start a server at `http://localhost:8080`, proxying API requests to the replica at port 4943.
-
-### Note on frontend environment variables
-
-If you are hosting frontend code somewhere without using DFX, you may need to make one of the following adjustments to ensure your project does not fetch the root key in production:
-
-- set`DFX_NETWORK` to `ic` if you are using Webpack
-- use your own preferred method to replace `process.env.DFX_NETWORK` in the autogenerated declarations
-  - Setting `canisters -> {asset_canister_id} -> declarations -> env_override to a string` in `dfx.json` will replace `process.env.DFX_NETWORK` with the string in the autogenerated declarations
-- Write your own `createActor` constructor
+**Status**: ✅ Fully operational with security monitoring system deployed and tested.

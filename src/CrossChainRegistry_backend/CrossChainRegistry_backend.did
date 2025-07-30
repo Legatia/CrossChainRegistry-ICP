@@ -12,8 +12,11 @@ type Web3Identity = record {
     twitter_handle : opt text;
     discord_server : opt text;
     telegram_channel : opt text;
+    linkedin_company : opt text;
+    medium_publication : opt text;
     domain_verified : bool;
     social_verification_status : VerificationStatus;
+    verification_proofs : vec VerificationProof;
 };
 
 type CrossChainPresence = record {
@@ -21,6 +24,9 @@ type CrossChainPresence = record {
     bitcoin_addresses : vec text;
     icp_canisters : vec text;
     polygon_contracts : vec text;
+    solana_addresses : vec text;
+    sui_addresses : vec text;
+    ton_addresses : vec text;
     treasury_wallets : vec WalletInfo;
     token_contracts : vec TokenInfo;
 };
@@ -82,6 +88,28 @@ type VerificationStatus = variant {
     Pending;
     Verified;
     Failed;
+    Expired;
+};
+
+type VerificationProof = record {
+    verification_type : VerificationType;
+    proof_url : text;
+    verified_at : nat64;
+    verification_method : VerificationMethod;
+    challenge_data : opt text;
+    status : ProofStatus;
+};
+
+type VerificationMethod = variant {
+    Automated;
+    ProofVisible;
+    ManualReview;
+};
+
+type ProofStatus = variant {
+    Active;
+    Removed;
+    Disputed;
     Expired;
 };
 
@@ -151,6 +179,8 @@ type VerificationType = variant {
     Twitter;
     Discord;
     Telegram;
+    LinkedIn;
+    Medium;
 };
 
 type VerificationResult = record {

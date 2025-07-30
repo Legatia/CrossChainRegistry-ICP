@@ -56,10 +56,20 @@ test_logs/
 **/verification_tests_*.log
 **/error_tests_*.log
 **/performance_tests_*.log
+**/enhanced_*.log
+**/security_tests_*.log
+**/monitoring_tests_*.log
 **/test_report_*.html
+**/test_report_*.md
 **/benchmark_*.txt
 **/deploy_*.log
 **/data_generation_*.log
+
+# Enhanced features test artifacts
+/tmp/enhanced_features_test_report.md
+/tmp/validate_enhanced_features.sh
+**/enhanced_test_*.tmp
+**/security_test_*.tmp
 
 # IDE and editor temporary files
 *.swp
@@ -78,6 +88,11 @@ ehthumbs.db
 
 # Claude Code
 .claude/
+
+# Rust build artifacts
+**/target/
+**/.cargo/
+**/Cargo.lock.bak
 
 # Cargo.lock should be committed for applications but ignored for libraries
 # Since this is an ICP canister application, we'll commit Cargo.lock

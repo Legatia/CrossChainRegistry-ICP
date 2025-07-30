@@ -22,6 +22,8 @@ pub struct Web3Identity {
     pub twitter_handle: Option<String>,
     pub discord_server: Option<String>,
     pub telegram_channel: Option<String>,
+    pub linkedin_company: Option<String>,
+    pub medium_publication: Option<String>,
     pub domain_verified: bool,
     pub social_verification_status: VerificationStatus,
     pub verification_proofs: Vec<VerificationProof>,
@@ -224,13 +226,29 @@ pub struct VerificationRequest {
     pub proof_data: String, // Challenge response or proof
 }
 
-#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub enum VerificationType {
     GitHub,
     Domain,
     Twitter,
     Discord,
     Telegram,
+    LinkedIn,
+    Medium,
+}
+
+impl std::fmt::Display for VerificationType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VerificationType::GitHub => write!(f, "GitHub"),
+            VerificationType::Domain => write!(f, "Domain"),
+            VerificationType::Twitter => write!(f, "Twitter"),
+            VerificationType::Discord => write!(f, "Discord"),
+            VerificationType::Telegram => write!(f, "Telegram"),
+            VerificationType::LinkedIn => write!(f, "LinkedIn"),
+            VerificationType::Medium => write!(f, "Medium"),
+        }
+    }
 }
 
 #[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
@@ -304,6 +322,114 @@ pub struct DomainVerificationChallenge {
     pub challenge_token: String,
     pub created_at: u64,
     pub expires_at: u64,
+}
+
+// Security Event Logging Types
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct SecurityEvent {
+    pub event_id: String,
+    pub event_type: SecurityEventType,
+    pub principal: Option<Principal>,
+    pub timestamp: u64,
+    pub severity: SecuritySeverity,
+    pub details: String,
+    pub ip_address: Option<String>,
+    pub user_agent: Option<String>,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum SecurityEventType {
+    RateLimitExceeded,
+    SuspiciousInput,
+    XSSAttempt,
+    URLInjectionAttempt,
+    RepeatedFailedVerification,
+    UnauthorizedAccess,
+    ProofTampering,
+    BruteForceAttempt,
+    SecurityScan,
+    CommunityReport,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum SecuritySeverity {
+    Low,    // Rate limit hit, minor issues
+    Medium, // Suspicious patterns, potential threats
+    High,   // Clear attack attempts, data integrity issues
+    Critical, // System compromise attempts, security breaches
+}
+
+// Monitoring System Types
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct MonitoringTask {
+    pub task_id: String,
+    pub task_type: TaskType,
+    pub target_company_id: String,
+    pub target_proof_id: Option<String>,
+    pub scheduled_at: u64,
+    pub priority: TaskPriority,
+    pub retry_count: u32,
+    pub max_retries: u32,
+    pub last_error: Option<String>,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum TaskType {
+    ProofCheck,           // Check if verification post still exists
+    ContentValidation,    // Verify post still contains required text
+    ReputationUpdate,     // Update company reputation based on monitoring
+    SecurityScan,         // Periodic security audit
+    CommunityAlert,       // Send alerts to community
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum TaskPriority {
+    Low,    // Regular maintenance checks
+    Medium, // Standard monitoring tasks
+    High,   // Community reported issues
+    Critical, // Security incidents, immediate threats
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct MonitoringStats {
+    pub total_proofs_monitored: u32,
+    pub active_proofs: u32,
+    pub removed_proofs: u32,
+    pub disputed_proofs: u32,
+    pub last_full_scan: u64,
+    pub security_events_today: u32,
+    pub failed_checks_count: u32,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub struct CommunityAlert {
+    pub alert_id: String,
+    pub company_id: String,
+    pub alert_type: AlertType,
+    pub message: String,
+    pub evidence: Vec<String>,
+    pub created_at: u64,
+    pub acknowledged: bool,
+    pub severity: AlertSeverity,
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum AlertType {
+    ProofDeleted,         // Verification post was deleted
+    ProofModified,        // Required text removed from post
+    SuspiciousActivity,   // Unusual patterns detected
+    SecurityBreach,       // Potential security incident
+    CommunityReport,      // User reported suspicious behavior
+}
+
+#[derive(CandidType, Deserialize, Serialize, Clone, Debug)]
+pub enum AlertSeverity {
+    Info,     // FYI notifications
+    Warning,  // Suspicious but not critical
+    Error,    // Clear issues that need attention
+    Critical, // Immediate action required
 }
 
 //Cross-Chain Verification Types
@@ -437,6 +563,54 @@ impl Storable for DomainVerificationChallenge {
 }
 
 impl Storable for CrossChainChallenge {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(candid::encode_one(self).unwrap())
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        candid::decode_one(&bytes).unwrap()
+    }
+
+    const BOUND: Bound = Bound::Unbounded;
+}
+
+impl Storable for SecurityEvent {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(candid::encode_one(self).unwrap())
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        candid::decode_one(&bytes).unwrap()
+    }
+
+    const BOUND: Bound = Bound::Unbounded;
+}
+
+impl Storable for MonitoringTask {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(candid::encode_one(self).unwrap())
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        candid::decode_one(&bytes).unwrap()
+    }
+
+    const BOUND: Bound = Bound::Unbounded;
+}
+
+impl Storable for CommunityAlert {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(candid::encode_one(self).unwrap())
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        candid::decode_one(&bytes).unwrap()
+    }
+
+    const BOUND: Bound = Bound::Unbounded;
+}
+
+impl Storable for ProofMonitoring {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Owned(candid::encode_one(self).unwrap())
     }

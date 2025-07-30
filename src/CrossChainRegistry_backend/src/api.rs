@@ -63,6 +63,12 @@ impl RegistryAPI {
         if let Some(telegram) = &request.web3_identity.telegram_channel {
             Self::validate_string_length(telegram, Self::MAX_URL_LENGTH, "Telegram channel")?;
         }
+        if let Some(linkedin) = &request.web3_identity.linkedin_company {
+            Self::validate_string_length(linkedin, Self::MAX_SOCIAL_HANDLE_LENGTH, "LinkedIn company")?;
+        }
+        if let Some(medium) = &request.web3_identity.medium_publication {
+            Self::validate_string_length(medium, Self::MAX_SOCIAL_HANDLE_LENGTH, "Medium publication")?;
+        }
 
         // Validate cross-chain addresses
         if request.cross_chain_presence.ethereum_contracts.len() > Self::MAX_ADDRESSES_PER_CHAIN {

@@ -1,8 +1,10 @@
 use crate::storage::StorageManager;
+use crate::monitoring::MonitoringSystem;
 use crate::types::{
     Company, CommunityReport, DomainVerificationChallenge, GitHubOrgResponse, ProofCheckResult,
     ProofStatus, RegistryResult, ReportType, VerificationMethod, VerificationProof,
-    VerificationResult, VerificationStatus, VerificationType,
+    VerificationResult, VerificationStatus, VerificationType, SecurityEventType, SecuritySeverity,
+    TaskPriority,
 };
 use candid::Principal;
 use ic_cdk::api::management_canister::http_request::{
@@ -147,9 +149,20 @@ impl VerificationManager {
                         Ok(github_data) => {
                             // Verify organization exists and has reasonable activity
                             if github_data.public_repos >= 1 {
+                                // Create permanent verification proof
+                                let proof = VerificationProof {
+                                    verification_type: VerificationType::GitHub,
+                                    proof_url: format!("https://github.com/{}", github_org),
+                                    verified_at: time(),
+                                    verification_method: VerificationMethod::Automated,
+                                    challenge_data: None,
+                                    status: ProofStatus::Active,
+                                };
+
                                 // Update company verification status
                                 let success = StorageManager::update_company(&company_id, |company| {
                                     company.web3_identity.github_org = Some(github_org.clone());
+                                    company.web3_identity.verification_proofs.push(proof.clone());
                                     company.web3_identity.social_verification_status =
                                         VerificationStatus::Verified;
                                     company.verification_score =
@@ -157,15 +170,41 @@ impl VerificationManager {
                                 });
 
                                 if success {
+                                    // Log successful verification
+                                    MonitoringSystem::log_security_event(
+                                        SecurityEventType::SecurityScan,
+                                        Some(caller_principal),
+                                        SecuritySeverity::Low,
+                                        format!("GitHub organization verified: {} for company {}", github_org, company_id),
+                                        None,
+                                        None,
+                                    );
+
+                                    // Schedule monitoring for this GitHub organization
+                                    let proof_id = format!("{}_{}", VerificationType::GitHub, proof.verified_at);
+                                    MonitoringSystem::schedule_proof_monitoring(
+                                        company_id.clone(),
+                                        proof_id,
+                                        TaskPriority::Medium,
+                                    );
+
                                     RegistryResult::Ok(VerificationResult {
                                         success: true,
                                         message: format!(
-                                            "GitHub organization '{}' verified successfully",
+                                            "GitHub organization '{}' verified successfully. Organization will be monitored for continued existence.",
                                             github_org
                                         ),
                                         verified_at: Some(time()),
                                     })
                                 } else {
+                                    MonitoringSystem::log_security_event(
+                                        SecurityEventType::RepeatedFailedVerification,
+                                        Some(caller_principal),
+                                        SecuritySeverity::Medium,
+                                        format!("Failed to update company during GitHub verification: {}", company_id),
+                                        None,
+                                        None,
+                                    );
                                     RegistryResult::Err("Failed to update company".to_string())
                                 }
                             } else {
@@ -291,9 +330,20 @@ impl VerificationManager {
                     let response_text = String::from_utf8_lossy(&response.body);
 
                     if response_text.contains(&challenge.challenge_token) {
-                        // Verification successful
+                        // Create permanent verification proof
+                        let proof = VerificationProof {
+                            verification_type: VerificationType::Domain,
+                            proof_url: format!("https://{}", challenge.domain),
+                            verified_at: time(),
+                            verification_method: VerificationMethod::Automated,
+                            challenge_data: Some(challenge.challenge_token.clone()),
+                            status: ProofStatus::Active,
+                        };
+
+                        // Verification successful - update company with proof
                         let success = StorageManager::update_company(&company_id, |company| {
                             company.web3_identity.domain_verified = true;
+                            company.web3_identity.verification_proofs.push(proof.clone());
                             company.verification_score = Self::calculate_verification_score(company);
                         });
 
@@ -301,29 +351,97 @@ impl VerificationManager {
                             // Remove challenge
                             StorageManager::remove_domain_challenge(&company_id);
 
+                            // Log successful verification
+                            MonitoringSystem::log_security_event(
+                                SecurityEventType::SecurityScan,
+                                Some(caller_principal),
+                                SecuritySeverity::Low,
+                                format!("Domain verification completed: {} for company {}", challenge.domain, company_id),
+                                None,
+                                None,
+                            );
+
+                            // Schedule monitoring for this domain
+                            let proof_id = format!("{}_{}", VerificationType::Domain, proof.verified_at);
+                            MonitoringSystem::schedule_proof_monitoring(
+                                company_id.clone(),
+                                proof_id,
+                                TaskPriority::Medium,
+                            );
+
                             RegistryResult::Ok(VerificationResult {
                                 success: true,
-                                message: format!("Domain '{}' verified successfully", challenge.domain),
+                                message: format!(
+                                    "Domain '{}' verified successfully. Domain will be monitored for continued TXT record presence.",
+                                    challenge.domain
+                                ),
                                 verified_at: Some(time()),
                             })
                         } else {
+                            MonitoringSystem::log_security_event(
+                                SecurityEventType::RepeatedFailedVerification,
+                                Some(caller_principal),
+                                SecuritySeverity::Medium,
+                                format!("Failed to update company during domain verification: {}", company_id),
+                                None,
+                                None,
+                            );
                             RegistryResult::Err("Failed to update company".to_string())
                         }
                     } else {
+                        // Log failed verification attempt
+                        MonitoringSystem::log_security_event(
+                            SecurityEventType::RepeatedFailedVerification,
+                            Some(caller_principal),
+                            SecuritySeverity::Low,
+                            format!(
+                                "Domain verification failed - TXT record not found: {} for company {}",
+                                challenge.domain, company_id
+                            ),
+                            None,
+                            None,
+                        );
+
                         RegistryResult::Ok(VerificationResult {
                             success: false,
                             message: format!(
-                                "TXT record with token '{}' not found in domain '{}'",
+                                "TXT record with token '{}' not found in domain '{}'. Ensure the DNS record is properly configured and propagated.",
                                 challenge.challenge_token, challenge.domain
                             ),
                             verified_at: None,
                         })
                     }
                 } else {
+                    // Log DNS query failure
+                    MonitoringSystem::log_security_event(
+                        SecurityEventType::SuspiciousInput,
+                        Some(caller_principal),
+                        SecuritySeverity::Medium,
+                        format!(
+                            "DNS query failed for domain verification: {} with status {} for company {}",
+                            challenge.domain, response.status, company_id
+                        ),
+                        None,
+                        None,
+                    );
                     RegistryResult::Err(format!("DNS query failed with status: {}", response.status))
                 }
             }
-            Err(err) => RegistryResult::Err(format!("DNS query request failed: {:?}", err)),
+            Err(err) => {
+                // Log HTTP request failure
+                MonitoringSystem::log_security_event(
+                    SecurityEventType::SuspiciousInput,
+                    Some(caller_principal),
+                    SecuritySeverity::Medium,
+                    format!(
+                        "HTTP request failed during domain verification for {}: {:?}",
+                        challenge.domain, err
+                    ),
+                    None,
+                    None,
+                );
+                RegistryResult::Err(format!("DNS query request failed: {:?}", err))
+            }
         }
     }
 
@@ -344,27 +462,116 @@ impl VerificationManager {
             return RegistryResult::Err("Unauthorized: Only company creator can verify".to_string());
         }
 
+        // Check verification-specific rate limiting
+        if !StorageManager::check_verification_rate_limit(caller_principal) {
+            let (current_requests, _) = StorageManager::get_rate_limit_info(caller_principal);
+            // Log rate limit violation
+            MonitoringSystem::log_security_event(
+                SecurityEventType::RateLimitExceeded,
+                Some(caller_principal),
+                SecuritySeverity::Medium,
+                format!(
+                    "Rate limit exceeded for social media verification: {} attempts for company {}",
+                    current_requests, company_id
+                ),
+                None,
+                None,
+            );
+            return RegistryResult::Err(format!(
+                "Verification rate limit exceeded ({} attempts). Please wait 5 minutes before trying again.", 
+                current_requests
+            ));
+        }
+
         // Secure URL validation with domain whitelisting
         let verification_type = match platform.to_lowercase().as_str() {
             "twitter" => {
                 if let Err(e) = Self::validate_secure_url(&proof_url, &["twitter.com", "x.com", "mobile.twitter.com"]) {
+                    // Log URL validation failure
+                    MonitoringSystem::log_security_event(
+                        SecurityEventType::URLInjectionAttempt,
+                        Some(caller_principal),
+                        SecuritySeverity::Medium,
+                        format!("Twitter URL validation failed for company {}: {}", company_id, e),
+                        None,
+                        None,
+                    );
                     return RegistryResult::Err(e);
                 }
                 VerificationType::Twitter
             }
             "discord" => {
                 if let Err(e) = Self::validate_secure_url(&proof_url, &["discord.gg", "discord.com", "discordapp.com"]) {
+                    // Log URL validation failure
+                    MonitoringSystem::log_security_event(
+                        SecurityEventType::URLInjectionAttempt,
+                        Some(caller_principal),
+                        SecuritySeverity::Medium,
+                        format!("Discord URL validation failed for company {}: {}", company_id, e),
+                        None,
+                        None,
+                    );
                     return RegistryResult::Err(e);
                 }
                 VerificationType::Discord
             }
             "telegram" => {
                 if let Err(e) = Self::validate_secure_url(&proof_url, &["t.me", "telegram.me"]) {
+                    // Log URL validation failure
+                    MonitoringSystem::log_security_event(
+                        SecurityEventType::URLInjectionAttempt,
+                        Some(caller_principal),
+                        SecuritySeverity::Medium,
+                        format!("Telegram URL validation failed for company {}: {}", company_id, e),
+                        None,
+                        None,
+                    );
                     return RegistryResult::Err(e);
                 }
                 VerificationType::Telegram
             }
-            _ => return RegistryResult::Err("Unsupported platform".to_string()),
+            "linkedin" => {
+                if let Err(e) = Self::validate_secure_url(&proof_url, &["linkedin.com", "www.linkedin.com"]) {
+                    // Log URL validation failure
+                    MonitoringSystem::log_security_event(
+                        SecurityEventType::URLInjectionAttempt,
+                        Some(caller_principal),
+                        SecuritySeverity::Medium,
+                        format!("LinkedIn URL validation failed for company {}: {}", company_id, e),
+                        None,
+                        None,
+                    );
+                    return RegistryResult::Err(e);
+                }
+                VerificationType::LinkedIn
+            }
+            "medium" => {
+                if let Err(e) = Self::validate_secure_url(&proof_url, &["medium.com", "www.medium.com"]) {
+                    // Log URL validation failure
+                    MonitoringSystem::log_security_event(
+                        SecurityEventType::URLInjectionAttempt,
+                        Some(caller_principal),
+                        SecuritySeverity::Medium,
+                        format!("Medium URL validation failed for company {}: {}", company_id, e),
+                        None,
+                        None,
+                    );
+                    return RegistryResult::Err(e);
+                }
+                VerificationType::Medium
+            }
+            _ => {
+                // Log unsupported platform attempt
+                MonitoringSystem::log_security_event(
+                    SecurityEventType::SuspiciousInput,
+                    Some(caller_principal),
+                    SecuritySeverity::Low,
+                    format!("Unsupported social media platform attempted: {} for company {}", platform, company_id),
+                    None,
+                    None,
+                );
+                return RegistryResult::Err("Unsupported platform".to_string());
+            }
         };
 
         // Create permanent verification proof with sanitized data
@@ -400,6 +607,24 @@ impl VerificationManager {
                     let sanitized_url = Self::sanitize_url(&proof_url);
                     company.web3_identity.telegram_channel = Some(sanitized_url);
                 }
+                "linkedin" => {
+                    // Extract and sanitize company name from URL
+                    if let Some(company_name) = Self::extract_linkedin_company(&proof_url) {
+                        let sanitized_name = Self::sanitize_social_handle(&company_name);
+                        if !sanitized_name.is_empty() {
+                            company.web3_identity.linkedin_company = Some(sanitized_name);
+                        }
+                    }
+                }
+                "medium" => {
+                    // Extract and sanitize publication name from URL
+                    if let Some(publication) = Self::extract_medium_publication(&proof_url) {
+                        let sanitized_name = Self::sanitize_social_handle(&publication);
+                        if !sanitized_name.is_empty() {
+                            company.web3_identity.medium_publication = Some(sanitized_name);
+                        }
+                    }
+                }
                 _ => {}
             }
             
@@ -410,6 +635,24 @@ impl VerificationManager {
         });
 
         if success {
+            // Log successful verification
+            MonitoringSystem::log_security_event(
+                SecurityEventType::SuspiciousInput, // Using this as a placeholder for verification events
+                Some(caller_principal),
+                SecuritySeverity::Low,
+                format!("Social media verification completed: {} for company {}", platform, company_id),
+                None,
+                None,
+            );
+
+            // Schedule monitoring for this proof
+            let proof_id = format!("{}_{}", verification_type, proof.verified_at);
+            MonitoringSystem::schedule_proof_monitoring(
+                company_id.clone(),
+                proof_id,
+                TaskPriority::Medium,
+            );
+
             RegistryResult::Ok(VerificationResult {
                 success: true,
                 message: format!(
@@ -419,6 +662,16 @@ impl VerificationManager {
                 verified_at: Some(time()),
             })
         } else {
+            // Log verification failure
+            MonitoringSystem::log_security_event(
+                SecurityEventType::RepeatedFailedVerification,
+                Some(caller_principal),
+                SecuritySeverity::Medium,
+                format!("Failed to update company during {} verification for {}", platform, company_id),
+                None,
+                None,
+            );
+            
             RegistryResult::Err("Failed to update company".to_string())
         }
     }
@@ -481,6 +734,26 @@ impl VerificationManager {
                 ✅ This message will be permanently accessible via your company profile"
                     .to_string()
             }
+            VerificationType::LinkedIn => {
+                "💼 LinkedIn Verification (Permanent Proof Required):\n\
+                1. Create a company page post with this exact text: 'ICP CrossChain Registry - Company ID: [YOUR_COMPANY_ID]'\n\
+                2. Include your company mission and Web3 focus areas\n\
+                3. Make the post public and pin it to your company page\n\
+                4. Call verify_social_media_with_proof with the post URL\n\
+                ⚠️  WARNING: Deleting this post will trigger verification review\n\
+                ✅ This post will be permanently linked to your company profile"
+                    .to_string()
+            }
+            VerificationType::Medium => {
+                "📝 Medium Verification (Permanent Proof Required):\n\
+                1. Publish an article with this exact text: 'ICP CrossChain Registry - Company ID: [YOUR_COMPANY_ID]'\n\
+                2. Include your company story and Web3 journey\n\
+                3. Publish under your company publication\n\
+                4. Call verify_social_media_with_proof with the article URL\n\
+                ⚠️  WARNING: Unpublishing this article will affect your verification status\n\
+                ✅ This article will be permanently referenced in your company profile"
+                    .to_string()
+            }
         }
     }
 
@@ -540,6 +813,30 @@ impl VerificationManager {
                     4. Call verify_social_media_with_proof with the message URL\n\
                     ⚠️  WARNING: Removing this message will result in verification loss\n\
                     ✅ This message will be permanently accessible via your company profile",
+                    required_text
+                )
+            }
+            VerificationType::LinkedIn => {
+                format!(
+                    "💼 LinkedIn Verification (Permanent Proof Required):\n\
+                    1. Create a company page post with this exact text: '{}'\n\
+                    2. Include your company mission and Web3 focus areas\n\
+                    3. Make the post public and pin it to your company page\n\
+                    4. Call verify_social_media_with_proof with the post URL\n\
+                    ⚠️  WARNING: Deleting this post will trigger verification review\n\
+                    ✅ This post will be permanently linked to your company profile",
+                    required_text
+                )
+            }
+            VerificationType::Medium => {
+                format!(
+                    "📝 Medium Verification (Permanent Proof Required):\n\
+                    1. Publish an article with this exact text: '{}'\n\
+                    2. Include your company story and Web3 journey\n\
+                    3. Publish under your company publication\n\
+                    4. Call verify_social_media_with_proof with the article URL\n\
+                    ⚠️  WARNING: Unpublishing this article will affect your verification status\n\
+                    ✅ This article will be permanently referenced in your company profile",
                     required_text
                 )
             }
@@ -655,11 +952,29 @@ impl VerificationManager {
     fn validate_secure_url(url: &str, allowed_domains: &[&str]) -> Result<(), String> {
         // Basic HTTPS requirement
         if !url.starts_with("https://") {
+            // Log potential URL injection attempt
+            MonitoringSystem::log_security_event(
+                SecurityEventType::URLInjectionAttempt,
+                Some(ic_cdk::caller()),
+                SecuritySeverity::Medium,
+                format!("Non-HTTPS URL attempted: {}", url),
+                None,
+                None,
+            );
             return Err("URL must use HTTPS protocol".to_string());
         }
 
         // Length validation to prevent resource exhaustion
         if url.len() > 2048 {
+            // Log potential DoS attempt
+            MonitoringSystem::log_security_event(
+                SecurityEventType::SuspiciousInput,
+                Some(ic_cdk::caller()),
+                SecuritySeverity::Medium,
+                format!("Excessively long URL attempted: {} chars", url.len()),
+                None,
+                None,
+            );
             return Err("URL exceeds maximum length".to_string());
         }
 
@@ -681,6 +996,15 @@ impl VerificationManager {
 
         // Check for homograph attacks (non-ASCII characters)
         if !hostname.chars().all(|c| c.is_ascii()) {
+            // Log potential homograph attack
+            MonitoringSystem::log_security_event(
+                SecurityEventType::SuspiciousInput,
+                Some(ic_cdk::caller()),
+                SecuritySeverity::High,
+                format!("Non-ASCII characters in domain detected: {}", hostname),
+                None,
+                None,
+            );
             return Err("Non-ASCII characters in domain not allowed".to_string());
         }
 
@@ -690,6 +1014,15 @@ impl VerificationManager {
         });
 
         if !is_valid_domain {
+            // Log unauthorized domain attempt
+            MonitoringSystem::log_security_event(
+                SecurityEventType::URLInjectionAttempt,
+                Some(ic_cdk::caller()),
+                SecuritySeverity::Medium,
+                format!("Unauthorized domain attempted: {} (allowed: {:?})", hostname, allowed_domains),
+                None,
+                None,
+            );
             return Err(format!(
                 "URL must be from authorized domains: {}",
                 allowed_domains.join(", ")
@@ -698,6 +1031,15 @@ impl VerificationManager {
 
         // Additional security checks
         if hostname.contains("..") || hostname.contains("--") {
+            // Log suspicious hostname pattern
+            MonitoringSystem::log_security_event(
+                SecurityEventType::SuspiciousInput,
+                Some(ic_cdk::caller()),
+                SecuritySeverity::High,
+                format!("Suspicious hostname pattern detected: {}", hostname),
+                None,
+                None,
+            );
             return Err("Suspicious hostname pattern detected".to_string());
         }
 
@@ -805,6 +1147,30 @@ impl VerificationManager {
         let twitter_regex = Self::safe_regex_new(r"(?:twitter\.com|x\.com)/([^/?]+)").ok()?;
         if let Some(captures) = twitter_regex.captures(url) {
             captures.get(1).map(|m| m.as_str().to_string())
+        } else {
+            None
+        }
+    }
+
+    fn extract_linkedin_company(url: &str) -> Option<String> {
+        let linkedin_regex = Self::safe_regex_new(r"linkedin\.com/company/([^/?]+)").ok()?;
+        if let Some(captures) = linkedin_regex.captures(url) {
+            captures.get(1).map(|m| m.as_str().to_string())
+        } else {
+            None
+        }
+    }
+
+    fn extract_medium_publication(url: &str) -> Option<String> {
+        let medium_regex = Self::safe_regex_new(r"medium\.com/([^/?@]+)").ok()?;
+        if let Some(captures) = medium_regex.captures(url) {
+            let publication = captures.get(1).map(|m| m.as_str().to_string())?;
+            // Skip if it's a user profile (starts with @)
+            if publication.starts_with('@') {
+                None
+            } else {
+                Some(publication)
+            }
         } else {
             None
         }

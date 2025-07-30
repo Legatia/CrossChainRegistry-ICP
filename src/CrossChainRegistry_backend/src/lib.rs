@@ -1,6 +1,7 @@
 mod api;
 mod community;
 mod crosschain;
+mod monitoring;
 mod storage;
 mod types;
 mod verification;
@@ -8,13 +9,16 @@ mod verification;
 use api::RegistryAPI;
 use community::CommunityValidationManager;
 use crosschain::CrossChainVerifier;
+use monitoring::MonitoringSystem;
 use ic_cdk::api::management_canister::http_request::TransformArgs;
 use storage::StorageManager;
 use types::{
     ChainType, Company, CommunityValidation, CommunityValidationStats, CreateCompanyRequest, 
     CrossChainChallenge, CrossChainVerificationRequest, DomainVerificationChallenge, Endorsement, 
-    ProofCheckResult, ProofStatus, RegistryResult, ReportType, ReputationLeaderboard, SearchFilters, 
+    RegistryResult, ReportType, ReputationLeaderboard, SearchFilters, 
     Testimonial, UpdateCompanyRequest, VerificationResult, VerificationType, Vouch,
+    SecurityEvent, SecurityEventType, SecuritySeverity, MonitoringStats, CommunityAlert,
+    TaskPriority,
 };
 use verification::VerificationManager;
 use std::collections::HashMap;
@@ -369,4 +373,110 @@ pub fn get_address_validation_rules(chain: String) -> RegistryResult<String> {
 #[ic_cdk::query]
 pub fn get_supported_chains() -> RegistryResult<Vec<String>> {
     RegistryAPI::get_supported_chains()
+}
+
+// Security & Monitoring API endpoints
+
+#[ic_cdk::update]
+pub fn submit_community_report(
+    company_id: String,
+    proof_id: Option<String>,
+    report_type: ReportType,
+    evidence: String,
+) -> RegistryResult<String> {
+    let caller = ic_cdk::caller();
+    match MonitoringSystem::submit_community_report(company_id, proof_id, report_type, evidence, caller) {
+        Ok(report_id) => RegistryResult::Ok(report_id),
+        Err(e) => RegistryResult::Err(e),
+    }
+}
+
+#[ic_cdk::update]
+pub fn process_monitoring_tasks() -> RegistryResult<Vec<String>> {
+    let processed_tasks = MonitoringSystem::process_monitoring_tasks();
+    RegistryResult::Ok(processed_tasks)
+}
+
+#[ic_cdk::update]
+pub fn schedule_proof_monitoring(
+    company_id: String,
+    proof_id: String,
+    priority: TaskPriority,
+) -> RegistryResult<()> {
+    MonitoringSystem::schedule_proof_monitoring(company_id, proof_id, priority);
+    RegistryResult::Ok(())
+}
+
+#[ic_cdk::query]
+pub fn get_monitoring_stats() -> RegistryResult<MonitoringStats> {
+    let stats = MonitoringSystem::get_monitoring_stats();
+    RegistryResult::Ok(stats)
+}
+
+#[ic_cdk::query]
+pub fn get_community_alerts(acknowledged: Option<bool>) -> RegistryResult<Vec<CommunityAlert>> {
+    let alerts = MonitoringSystem::get_community_alerts(acknowledged);
+    RegistryResult::Ok(alerts)
+}
+
+#[ic_cdk::update]
+pub fn acknowledge_alert(alert_id: String) -> RegistryResult<()> {
+    match MonitoringSystem::acknowledge_alert(alert_id) {
+        Ok(_) => RegistryResult::Ok(()),
+        Err(e) => RegistryResult::Err(e),
+    }
+}
+
+#[ic_cdk::query]
+pub fn get_security_events_by_severity(severity: SecuritySeverity) -> RegistryResult<Vec<SecurityEvent>> {
+    let events = MonitoringSystem::get_security_events_by_severity(severity);
+    RegistryResult::Ok(events)
+}
+
+#[ic_cdk::query]
+pub fn get_security_events_by_principal() -> RegistryResult<Vec<SecurityEvent>> {
+    let caller = ic_cdk::caller();
+    let events = MonitoringSystem::get_security_events_by_principal(caller);
+    RegistryResult::Ok(events)
+}
+
+// Timer-based monitoring functions
+#[ic_cdk::init]
+fn init() {
+    // Schedule periodic monitoring tasks
+    ic_cdk_timers::set_timer_interval(
+        std::time::Duration::from_secs(3600), // Every hour
+        || {
+            ic_cdk::spawn(async {
+                let _ = MonitoringSystem::process_monitoring_tasks();
+            });
+        },
+    );
+    
+    // Schedule cleanup tasks
+    ic_cdk_timers::set_timer_interval(
+        std::time::Duration::from_secs(21600), // Every 6 hours
+        || {
+            StorageManager::cleanup_rate_limits();
+        },
+    );
+}
+
+// Heartbeat for continuous monitoring
+#[ic_cdk::heartbeat]
+async fn heartbeat() {
+    // Process high-priority monitoring tasks more frequently
+    let tasks = MonitoringSystem::process_monitoring_tasks();
+    
+    // Log heartbeat activity for debugging
+    if !tasks.is_empty() {
+        MonitoringSystem::log_security_event(
+            SecurityEventType::SecurityScan,
+            None,
+            SecuritySeverity::Low,
+            format!("Heartbeat processed {} monitoring tasks", tasks.len()),
+            None,
+            None,
+        );
+    }
 }

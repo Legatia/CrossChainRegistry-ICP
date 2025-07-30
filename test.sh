@@ -45,6 +45,9 @@ show_help() {
     echo "  errors          Error handling tests"
     echo "  advanced        Advanced feature tests"
     echo "  performance     Performance tests"
+    echo "  enhanced        Enhanced features tests (Stage 2)"
+    echo "  security        Security and XSS protection tests"
+    echo "  monitoring      Monitoring integration tests"
     echo
     echo "Test Options (for 'test' command):"
     echo "  --generate-data Generate test data before running"
@@ -56,6 +59,8 @@ show_help() {
     echo "  $0 test                     # Run all tests"
     echo "  $0 test --generate-data     # Generate data and run all tests"
     echo "  $0 test crud                # Run CRUD tests only"
+    echo "  $0 enhanced                 # Run enhanced features tests"
+    echo "  $0 security                 # Run security tests only"
     echo "  $0 data                     # Generate test data"
     echo "  $0 clean                    # Clean test data"
     echo
@@ -76,6 +81,21 @@ case "${1:-help}" in
         shift  # Remove 'test' from arguments
         echo -e "${BLUE}Running comprehensive test suite...${NC}"
         "$TEST_DIR/run_tests.sh" "$@"
+        ;;
+    
+    "enhanced"|"e")
+        echo -e "${BLUE}Running enhanced features test suite...${NC}"
+        "$TEST_DIR/run_enhanced_tests.sh"
+        ;;
+    
+    "security"|"s")
+        echo -e "${BLUE}Running security tests...${NC}"
+        "$TEST_DIR/test_enhanced_security.sh"
+        ;;
+    
+    "monitoring"|"m")
+        echo -e "${BLUE}Running monitoring tests...${NC}"
+        "$TEST_DIR/test_monitoring.sh"
         ;;
     
     "data"|"d")
